@@ -16,6 +16,25 @@ envoy_cc_binary(
     ],
 )
 
+
+envoy_cc_binary(
+    name = "benchmark_main",
+    repository = "@envoy",
+    stamped = True,
+    deps = [":benchmark_main_lib"],
+)
+envoy_cc_library(
+    name = "benchmark_main_lib",
+    srcs = ["main.cc"],
+    repository = "@envoy",
+    external_deps = [
+        "abseil_symbolize",
+    ],
+    deps = [
+        "@envoy//source/exe:envoy_main_common_lib",
+    ],
+)
+
 envoy_cc_library(
     name = "echo2_lib",
     srcs = ["echo2.cc"],

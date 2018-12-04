@@ -1,5 +1,28 @@
 # Envoy filter example
 
+I needed this patch in the envoy submodule to get the build to work:
+
+```diff
+oschaaf@ubuntu-srv:~/code/envoy-filter-example/envoy$ git diff
+diff --git a/.bazelrc b/.bazelrc
+index 416f12293..254a17201 100644
+--- a/.bazelrc
++++ b/.bazelrc
+@@ -1 +1,2 @@
+-import %workspace%/tools/bazel.rc
++#import %workspace%/tools/bazel.rc
++import /home/oschaaf/code/envoy-filter-example/envoy/tools/bazel.rc
+\ No newline at end of file
+```
+
+# Building and running the benchmark
+
+```
+bazel build -c dbg //:benchmark_main
+bazel-bin/benchmark_main
+```
+
+
 This project demonstrates the linking of additional filters with the Envoy binary.
 A new filter `echo2` is introduced, identical modulo renaming to the existing
 [`echo`](https://github.com/envoyproxy/envoy/blob/master/source/extensions/filters/network/echo/echo.h)
