@@ -30,8 +30,18 @@ envoy_cc_library(
 
 envoy_cc_library(
     name = "benchmark_main_common_lib",
-    srcs = ["main_common.cc"],
-    hdrs = ["main_common.h"],
+    srcs = [
+        "main_common.cc",
+        "codec_client.cc",
+        "service.cc",
+        "benchmarker.cc"
+    ],
+    hdrs = [
+        "main_common.h",
+        "codec_client.h",
+        "service.h",
+        "benchmarker.h"
+    ],
     repository = "@envoy",
     deps = [
         "@envoy//source/exe:envoy_common_lib",

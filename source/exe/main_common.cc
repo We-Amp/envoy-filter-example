@@ -16,6 +16,10 @@
 #include "server/proto_descriptors.h"
 #include "server/server.h"
 #include "server/test_hooks.h"
+#include "common/upstream/upstream_impl.h"
+#include "common/network/raw_buffer_socket.h"
+
+#include "envoy/upstream/host_description.h"
 
 #include "absl/strings/str_split.h"
 
@@ -43,7 +47,7 @@ Runtime::LoaderPtr ProdComponentFactory::createRuntime(Server::Instance& server,
 }
 
 MainCommonBase::MainCommonBase(OptionsImpl& options, Event::TimeSystem& time_system,
-                               TestHooks& test_hooks, Server::ComponentFactory& component_factory,
+                               TestHooks& test_hooks, Service::ComponentFactory& component_factory,
                                std::unique_ptr<Runtime::RandomGenerator>&& random_generator,
                                Thread::ThreadFactory& thread_factory)
     : options_(options), component_factory_(component_factory), thread_factory_(thread_factory) {
@@ -75,7 +79,7 @@ MainCommonBase::MainCommonBase(OptionsImpl& options, Event::TimeSystem& time_sys
     stats_store_ = std::make_unique<Stats::ThreadLocalStoreImpl>(options_.statsOptions(),
                                                                  restarter_->statsAllocator());
 
-    server_ = std::make_unique<Server::InstanceImpl>(
+    service_ = std::make_unique<Service::InstanceImpl>(
         options_, time_system, local_address, test_hooks, *restarter_, *stats_store_,
         access_log_lock, component_factory, std::move(random_generator), *tls_, thread_factory);
 
@@ -100,16 +104,13 @@ void MainCommonBase::configureComponentLogLevels() {
 }
 
 bool MainCommonBase::run() {
-  std::cout << "\n\n******** Benchmark::MainCommonBase::run()  **********\n\n";
-  return false;
-
   switch (options_.mode()) {
   case Server::Mode::Serve:
-    server_->run();
+    service_->run();
     return true;
   case Server::Mode::Validate: {
-    auto local_address = Network::Utility::getLocalAddress(options_.localAddressIpVersion());
-    return Server::validateConfig(options_, local_address, component_factory_, thread_factory_);
+    //auto local_address = Network::Utility::getLocalAddress(options_.localAddressIpVersion());
+    return true; //Server::validateConfig(options_, local_address, component_factory_, thread_factory_);
   }
   case Server::Mode::InitOnly:
     PERF_DUMP();
@@ -122,10 +123,10 @@ void MainCommonBase::adminRequest(absl::string_view path_and_query, absl::string
                                   const AdminRequestFn& handler) {
   std::string path_and_query_buf = std::string(path_and_query);
   std::string method_buf = std::string(method);
-  server_->dispatcher().post([this, path_and_query_buf, method_buf, handler]() {
+  service_->dispatcher().post([this, path_and_query_buf, method_buf, handler]() {
     Http::HeaderMapImpl response_headers;
     std::string body;
-    server_->admin().request(path_and_query_buf, method_buf, response_headers, body);
+    service_->admin().request(path_and_query_buf, method_buf, response_headers, body);
     handler(response_headers, body);
   });
 }
@@ -147,25 +148,6 @@ std::string MainCommon::hotRestartVersion(uint64_t max_num_stats, uint64_t max_s
   UNREFERENCED_PARAMETER(max_stat_name_len);
 #endif
   return "disabled";
-}
-
-// Legacy implementation of main_common.
-//
-// TODO(jmarantz): Remove this when all callers are removed. At that time, MainCommonBase
-// and MainCommon can be merged. The current theory is that only Google calls this.
-int main_common(OptionsImpl& options) {
-  try {
-    Event::RealTimeSystem real_time_system_;
-    DefaultTestHooks default_test_hooks_;
-    ProdComponentFactory prod_component_factory_;
-    Thread::ThreadFactoryImpl thread_factory_;
-    MainCommonBase main_common(options, real_time_system_, default_test_hooks_,
-                               prod_component_factory_,
-                               std::make_unique<Runtime::RandomGeneratorImpl>(), thread_factory_);
-    return main_common.run() ? EXIT_SUCCESS : EXIT_FAILURE;
-  } catch (EnvoyException& e) {
-    return EXIT_FAILURE;
-  }
 }
 
 } // namespace Benchmark

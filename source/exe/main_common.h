@@ -10,6 +10,7 @@
 
 #include "server/options_impl.h"
 #include "server/server.h"
+#include "exe/service.h"
 #include "server/test_hooks.h"
 
 #ifdef ENVOY_HANDLE_SIGNALS
@@ -21,7 +22,8 @@ using namespace Envoy;
 
 namespace Benchmark {
 
-class ProdComponentFactory : public Server::ComponentFactory {
+
+class ProdComponentFactory : public Service::ComponentFactory {
 public:
   // Server::DrainManagerFactory
   Server::DrainManagerPtr createDrainManager(Server::Instance& server) override;
@@ -34,7 +36,7 @@ public:
   // Consumer must guarantee that all passed references are alive until this object is
   // destructed.
   MainCommonBase(OptionsImpl& options, Event::TimeSystem& time_system, TestHooks& test_hooks,
-                 Server::ComponentFactory& component_factory,
+                 Service::ComponentFactory& component_factory,
                  std::unique_ptr<Runtime::RandomGenerator>&& random_generator,
                  Thread::ThreadFactory& thread_factory);
   ~MainCommonBase();
@@ -42,7 +44,7 @@ public:
   bool run();
 
   // Will be null if options.mode() == Server::Mode::Validate
-  Server::Instance* server() { return server_.get(); }
+  Server::Instance* server() { return service_.get(); }
 
   using AdminRequestFn =
       std::function<void(const Http::HeaderMap& response_headers, absl::string_view body)>;
@@ -65,14 +67,14 @@ public:
 protected:
   Envoy::OptionsImpl& options_;
 
-  Server::ComponentFactory& component_factory_;
+  Service::ComponentFactory& component_factory_;
   Thread::ThreadFactory& thread_factory_;
 
   std::unique_ptr<ThreadLocal::InstanceImpl> tls_;
   std::unique_ptr<Server::HotRestart> restarter_;
   std::unique_ptr<Stats::ThreadLocalStoreImpl> stats_store_;
   std::unique_ptr<Logger::Context> logging_context_;
-  std::unique_ptr<Server::InstanceImpl> server_;
+  std::unique_ptr<Service::InstanceImpl> service_;
 
 private:
   void configureComponentLogLevels();
@@ -115,14 +117,5 @@ private:
   Thread::ThreadFactoryImpl thread_factory_;
   MainCommonBase base_;
 };
-
-/**
- * This is the real main body that executes after site-specific
- * main() runs.
- *
- * @param options Options object initialized by site-specific code
- * @return int Return code that should be returned from the actual main()
- */
-int main_common(OptionsImpl& options);
 
 } // namespace Benchmark
