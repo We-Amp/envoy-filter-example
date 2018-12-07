@@ -60,7 +60,9 @@ MainCommonBase::MainCommonBase(OptionsImpl& options, Event::TimeSystem& time_sys
   case Server::Mode::Serve: {
 #ifdef ENVOY_HOT_RESTART
     if (!options.hotRestartDisabled()) {
-      restarter_ = std::make_unique<Server::HotRestartImpl>(options_);
+      // TODO(oschaaf): disable hot restarting because it causes
+      // trouble when we want to benchmark Envoy
+      //restarter_ = std::make_unique<Server::HotRestartImpl>(options_);
     }
 #endif
     if (restarter_ == nullptr) {
