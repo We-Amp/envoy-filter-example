@@ -46,7 +46,7 @@ void BufferingStreamDecoder::onComplete() {
 }
 
 void BufferingStreamDecoder::onResetStream(Envoy::Http::StreamResetReason) {
-  std::cout << "********  reset stream\n";
+  //std::cout << "********  reset stream\n";
   // TODO(oschaaf):
   //ADD_FAILURE();
   delete this;
