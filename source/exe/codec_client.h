@@ -31,7 +31,6 @@ public:
 
   bool complete() { return complete_; }
   const Http::HeaderMap& headers() { return *headers_; }
-  const std::string& body() { return body_; }
 
   // Http::StreamDecoder
   void decode100ContinueHeaders(Http::HeaderMapPtr&&) override {}
@@ -49,7 +48,6 @@ private:
   void onComplete();
 
   Http::HeaderMapPtr headers_;
-  std::string body_;
   bool complete_{};
   std::function<void()> on_complete_cb_;
 };

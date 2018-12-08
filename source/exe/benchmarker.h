@@ -18,6 +18,7 @@ public:
     std::string host, std::string path);
     void run();
 private:
+  void pulse();
   void setupCodecClients(unsigned int number_of_clients);
   void performRequest(std::function<void(std::chrono::nanoseconds)> cb);
 
@@ -30,6 +31,10 @@ private:
   std::chrono::steady_clock::time_point start_;
   unsigned int current_rps_;
   std::queue<Benchmarking::Http::CodecClientProd*> codec_clients_;
+  Event::TimerPtr timer_;
+  int requests_;
+  int callback_count_;
+  std::list<int> results_;
 };
 
 } // namespace Benchmark
