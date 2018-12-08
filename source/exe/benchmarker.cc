@@ -14,20 +14,22 @@
 
 namespace Benchmark {
 
-const auto timer_resolution = std::chrono::milliseconds(1);
+const auto timer_resolution = std::chrono::milliseconds(2);
   
 Benchmarker::Benchmarker(Envoy::Event::Dispatcher& dispatcher,
-  unsigned int connections, unsigned int rps,
-  std::string method, std::string host, std::string path) :
+			 unsigned int connections, unsigned int rps, std::chrono::seconds duration,
+			 std::string method, std::string host, std::string path) :
   dispatcher_(&dispatcher),
   connections_(connections),
   rps_(rps),
+  duration_(duration),
   method_(method),
   host_(host),
   path_(path),
   current_rps_(0),
   requests_(0),
   callback_count_(0) {
+  results_.reserve(duration.count() * rps);
 }
 
 void Benchmarker::setupCodecClients(unsigned int number_of_clients){
@@ -47,8 +49,8 @@ void Benchmarker::setupCodecClients(unsigned int number_of_clients){
   }
 }
 
-void Benchmarker::pulse() {
-  const int max_requests = 100;
+void Benchmarker::pulse(bool from_timer) {
+  int max_requests = rps_ * duration_.count(); // ~ seconds to run if we hit the right rps
   auto now = std::chrono::steady_clock::now();
   auto dur = now - start_;
   int ms_dur = std::chrono::duration_cast<std::chrono::milliseconds>(dur).count();
@@ -58,10 +60,9 @@ void Benchmarker::pulse() {
   if ((requests_ % (max_requests / 10)) == 0) {
     ENVOY_LOG(trace, "done {}/{} | rps {} | due {} @ {}", requests_, callback_count_, current_rps_, due_requests, ms_dur);
   }
-
   while (requests_ < max_requests && due_requests-- > 0 && codec_clients_.size() > 0) {
     ++requests_;
-    performRequest([this, ms_dur](std::chrono::nanoseconds nanoseconds) {
+    performRequest([this, ms_dur, max_requests](std::chrono::nanoseconds nanoseconds) {
 	ASSERT(nanoseconds.count() > 0);
 	results_.push_back(nanoseconds.count());
         if (++callback_count_ == max_requests) {
@@ -69,11 +70,13 @@ void Benchmarker::pulse() {
 	  dispatcher_->exit();
 	  return;
 	}
-	pulse();
+	timer_->enableTimer(std::chrono::milliseconds(0));
       });
   }
 
-  timer_->enableTimer(timer_resolution);
+  if (from_timer) {
+    timer_->enableTimer(timer_resolution);
+  }
 }
   
 void Benchmarker::run() {
@@ -82,14 +85,13 @@ void Benchmarker::run() {
 
   ENVOY_LOG(info, "target rps: {}, #connections: {}", rps_, connections_);
   
-  timer_ = dispatcher_->createTimer([this]() { pulse(); });
+  timer_ = dispatcher_->createTimer([this]() { pulse(true); });
   timer_->enableTimer(timer_resolution);
   dispatcher_->run(Envoy::Event::Dispatcher::RunType::Block);
 
   std::ofstream myfile;
   myfile.open ("res.txt");
   for (int r: results_) {
-    //ENVOY_LOG(info, "{} us", (r/1000));
     myfile << (r/1000) << "\n";
   }
   myfile.close();
@@ -125,9 +127,6 @@ void Benchmarker::performRequest(std::function<void(std::chrono::nanoseconds)> c
   });
 
   Http::StreamEncoder& encoder = client->newStream(*response);
-  // TODO(oschaaf): check the line below.
-  //encoder.getStream().addCallbacks(*response);
-
   Http::HeaderMapImpl headers;
   headers.insertMethod().value(Http::Headers::get().MethodValues.Get);
   headers.insertPath().value(std::string("/"));

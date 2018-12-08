@@ -14,17 +14,18 @@ namespace Benchmark {
 class Benchmarker : Envoy::Logger::Loggable<Envoy::Logger::Id::main> {
 public:
   Benchmarker(Envoy::Event::Dispatcher& dispatcher, unsigned int connections,
-    unsigned int rps, std::string method,
-    std::string host, std::string path);
+	      unsigned int rps, std::chrono::seconds duration, std::string method,
+	      std::string host, std::string path);
     void run();
 private:
-  void pulse();
+  void pulse(bool from_timer);
   void setupCodecClients(unsigned int number_of_clients);
   void performRequest(std::function<void(std::chrono::nanoseconds)> cb);
 
   Envoy::Event::Dispatcher* dispatcher_;
   unsigned int connections_;
   unsigned int rps_;
+  std::chrono::seconds duration_;
   std::string method_;
   std::string host_;
   std::string path_;
@@ -34,7 +35,7 @@ private:
   Event::TimerPtr timer_;
   int requests_;
   int callback_count_;
-  std::list<int> results_;
+  std::vector<int> results_;
 };
 
 } // namespace Benchmark

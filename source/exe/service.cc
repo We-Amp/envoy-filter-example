@@ -464,7 +464,7 @@ void InstanceImpl::run() {
   ENVOY_LOG(info, "starting main dispatch loop");
   auto watchdog = guard_dog_->createWatchDog(Thread::currentThreadId());
   watchdog->startWatchdog(*dispatcher_);
-  Benchmarker benchmarker(*dispatcher_, 1, 10 /*rps*/,
+  Benchmarker benchmarker(*dispatcher_, 1, 4000 /*rps*/, std::chrono::seconds(5),
     Http::Headers::get().MethodValues.Get, "/", "127.0.0.1");
   benchmarker.run();
   ENVOY_LOG(info, "main dispatch loop exited");
