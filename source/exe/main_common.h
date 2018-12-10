@@ -10,8 +10,8 @@
 
 //#include "server/options_impl.h
 #include "exe/benchmarking_options_impl.h"
-#include "server/server.h"
 #include "exe/service.h"
+#include "server/server.h"
 #include "server/test_hooks.h"
 
 #ifdef ENVOY_HANDLE_SIGNALS
@@ -22,7 +22,6 @@
 using namespace Envoy;
 
 namespace Benchmark {
-
 
 class ProdComponentFactory : public Service::ComponentFactory {
 public:
@@ -36,8 +35,8 @@ class MainCommonBase {
 public:
   // Consumer must guarantee that all passed references are alive until this object is
   // destructed.
-  MainCommonBase(Benchmarking::OptionsImpl& options, Event::TimeSystem& time_system, TestHooks& test_hooks,
-                 Service::ComponentFactory& component_factory,
+  MainCommonBase(Benchmarking::OptionsImpl& options, Event::TimeSystem& time_system,
+                 TestHooks& test_hooks, Service::ComponentFactory& component_factory,
                  std::unique_ptr<Runtime::RandomGenerator>&& random_generator,
                  Thread::ThreadFactory& thread_factory);
   ~MainCommonBase();

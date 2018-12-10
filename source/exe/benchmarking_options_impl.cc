@@ -4,19 +4,19 @@
 
 namespace Benchmarking {
 
-
 // TODO(oschaaf): We hide the real argc from the base class.
-OptionsImpl::OptionsImpl(int argc, const char* const* argv, const Envoy::OptionsImpl::HotRestartVersionCb& hot_restart_version_cb,
-			 spdlog::level::level_enum default_log_level) :
-  Envoy::OptionsImpl(1, argv, hot_restart_version_cb, default_log_level) {
-    (void)argc;
+OptionsImpl::OptionsImpl(int argc, const char* const* argv,
+                         const Envoy::OptionsImpl::HotRestartVersionCb& hot_restart_version_cb,
+                         spdlog::level::level_enum default_log_level)
+    : Envoy::OptionsImpl(1, argv, hot_restart_version_cb, default_log_level) {
+  (void)argc;
 
   TCLAP::CmdLine cmd("nighthawk", ' ', "PoC");
-    // we need to rebuild the command line parsing ourselves here.
+  // we need to rebuild the command line parsing ourselves here.
   TCLAP::ValueArg<uint64_t> requests_per_second("", "rps",
-                                      "Maximum number of stats gauges and counters "
-                                      "that can be allocated in shared memory.",
-                                      false, 500 /*default qps*/, "uint64_t", cmd);
+                                                "Maximum number of stats gauges and counters "
+                                                "that can be allocated in shared memory.",
+                                                false, 500 /*default qps*/, "uint64_t", cmd);
 
   cmd.setExceptionHandling(false);
   try {
@@ -38,13 +38,10 @@ OptionsImpl::OptionsImpl(int argc, const char* const* argv, const Envoy::Options
   }
 
   requests_per_second_ = requests_per_second.getValue();
-
 }
 OptionsImpl::OptionsImpl(const std::string& service_cluster, const std::string& service_node,
-			 const std::string& service_zone, spdlog::level::level_enum log_level) :
-  Envoy::OptionsImpl(service_cluster, service_node, service_zone, log_level) {
-}
-
+                         const std::string& service_zone, spdlog::level::level_enum log_level)
+    : Envoy::OptionsImpl(service_cluster, service_node, service_zone, log_level) {}
 
 BenchmarkingCommandLineOptionsPtr OptionsImpl::toBenchmarkingCommandLineOptions() const {
   auto options = std::make_unique<benchmarking::CommandLineOptions>();

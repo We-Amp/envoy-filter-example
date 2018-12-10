@@ -1,8 +1,8 @@
 #pragma once
 
 #include <functional>
-#include <string>
 #include <queue>
+#include <string>
 
 #include "exe/codec_client.h"
 
@@ -13,10 +13,11 @@ namespace Benchmark {
 
 class Benchmarker : Envoy::Logger::Loggable<Envoy::Logger::Id::main> {
 public:
-  Benchmarker(Envoy::Event::Dispatcher& dispatcher, unsigned int connections,
-	      unsigned int rps, std::chrono::seconds duration, std::string method,
-	      std::string host, std::string path);
-    void run();
+  Benchmarker(Envoy::Event::Dispatcher& dispatcher, unsigned int connections, unsigned int rps,
+              std::chrono::seconds duration, std::string method, std::string host,
+              std::string path);
+  void run();
+
 private:
   void pulse(bool from_timer);
   void setupCodecClients(unsigned int number_of_clients);

@@ -151,8 +151,7 @@ protected:
    * @param connection supplies the connection to communicate on.
    * @param host supplies the owning host.
    */
-  CodecClient(Type type, Network::ClientConnectionPtr&& connection,
-              Event::Dispatcher& dispatcher);
+  CodecClient(Type type, Network::ClientConnectionPtr&& connection, Event::Dispatcher& dispatcher);
 
   // Http::ConnectionCallbacks
   void onGoAway() override {
@@ -162,7 +161,7 @@ protected:
   }
 
   void onIdleTimeout() {
-    //host_->cluster().stats().upstream_cx_idle_timeout_.inc();
+    // host_->cluster().stats().upstream_cx_idle_timeout_.inc();
     close();
   }
 
@@ -181,7 +180,7 @@ protected:
   const Type type_;
   ClientConnectionPtr codec_;
   Network::ClientConnectionPtr connection_;
-  //Upstream::HostDescriptionConstSharedPtr host_;
+  // Upstream::HostDescriptionConstSharedPtr host_;
   Event::TimerPtr idle_timer_;
   const absl::optional<std::chrono::milliseconds> idle_timeout_;
 

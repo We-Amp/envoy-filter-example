@@ -9,6 +9,8 @@
 #include "common/network/utility.h"
 #include "common/stats/thread_local_store.h"
 
+#include "common/network/raw_buffer_socket.h"
+#include "common/upstream/upstream_impl.h"
 #include "server/config_validation/server.h"
 #include "server/drain_manager_impl.h"
 #include "server/hot_restart_nop_impl.h"
@@ -16,8 +18,6 @@
 #include "server/proto_descriptors.h"
 #include "server/server.h"
 #include "server/test_hooks.h"
-#include "common/upstream/upstream_impl.h"
-#include "common/network/raw_buffer_socket.h"
 
 #include "envoy/upstream/host_description.h"
 
@@ -62,7 +62,7 @@ MainCommonBase::MainCommonBase(Benchmarking::OptionsImpl& options, Event::TimeSy
     if (!options.hotRestartDisabled()) {
       // TODO(oschaaf): disable hot restarting because it causes
       // trouble when we want to benchmark Envoy
-      //restarter_ = std::make_unique<Server::HotRestartImpl>(options_);
+      // restarter_ = std::make_unique<Server::HotRestartImpl>(options_);
     }
 #endif
     if (restarter_ == nullptr) {
@@ -111,8 +111,9 @@ bool MainCommonBase::run() {
     service_->run();
     return true;
   case Server::Mode::Validate: {
-    //auto local_address = Network::Utility::getLocalAddress(options_.localAddressIpVersion());
-    return true; //Server::validateConfig(options_, local_address, component_factory_, thread_factory_);
+    // auto local_address = Network::Utility::getLocalAddress(options_.localAddressIpVersion());
+    return true; // Server::validateConfig(options_, local_address, component_factory_,
+                 // thread_factory_);
   }
   case Server::Mode::InitOnly:
     PERF_DUMP();

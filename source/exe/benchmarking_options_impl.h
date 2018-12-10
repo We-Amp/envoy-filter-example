@@ -6,9 +6,9 @@
 
 #include "envoy/common/exception.h"
 //#include "envoy/server/options.h"
-#include "server/options_impl.h"
-#include "envoy/stats/stats_options.h"
 #include "common/stats/stats_options_impl.h"
+#include "envoy/stats/stats_options.h"
+#include "server/options_impl.h"
 
 #include "source/exe/benchmark_options.pb.h"
 
@@ -20,7 +20,8 @@ typedef std::unique_ptr<benchmarking::CommandLineOptions> BenchmarkingCommandLin
 
 class OptionsImpl : public Envoy::OptionsImpl {
 public:
-  OptionsImpl(int argc, const char* const* argv, const Envoy::OptionsImpl::HotRestartVersionCb& hot_restart_version_cb,
+  OptionsImpl(int argc, const char* const* argv,
+              const Envoy::OptionsImpl::HotRestartVersionCb& hot_restart_version_cb,
               spdlog::level::level_enum default_log_level);
 
   // Test constructor; creates "reasonable" defaults, but desired values should be set explicitly.

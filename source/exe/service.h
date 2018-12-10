@@ -192,7 +192,8 @@ public:
 private:
   ProtobufTypes::MessagePtr dumpBootstrapConfig();
   void flushStats();
-  void initialize(Benchmarking::OptionsImpl& options, Network::Address::InstanceConstSharedPtr local_address,
+  void initialize(Benchmarking::OptionsImpl& options,
+                  Network::Address::InstanceConstSharedPtr local_address,
                   ComponentFactory& component_factory);
   void loadServerFlags(const absl::optional<std::string>& flags_path);
   uint64_t numConnections();
@@ -243,5 +244,5 @@ private:
   Envoy::MutexTracer* mutex_tracer_;
 };
 
-} // namespace Server
+} // namespace Service
 } // namespace Benchmark

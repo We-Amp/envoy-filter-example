@@ -13,7 +13,6 @@ using namespace Envoy;
 
 namespace Benchmarking {
 
-
 void BufferingStreamDecoder::decodeHeaders(Envoy::Http::HeaderMapPtr&& headers, bool end_stream) {
   ASSERT(!complete_);
   complete_ = end_stream;
@@ -27,7 +26,7 @@ void BufferingStreamDecoder::decodeData(Buffer::Instance& data, bool end_stream)
   ASSERT(!complete_);
   complete_ = end_stream;
   (void)&data;
-  //body_.append(data.toString());
+  // body_.append(data.toString());
   if (complete_) {
     onComplete();
   }
@@ -39,7 +38,7 @@ void BufferingStreamDecoder::decodeTrailers(Envoy::Http::HeaderMapPtr&&) {
 
 void BufferingStreamDecoder::onComplete() {
   ASSERT(complete_);
-  //std::cout << "********  body: " << body_ << "\n";
+  // std::cout << "********  body: " << body_ << "\n";
   on_complete_cb_();
   // TODO(oschaaf): assess
   delete this;
@@ -48,7 +47,7 @@ void BufferingStreamDecoder::onComplete() {
 void BufferingStreamDecoder::onResetStream(Envoy::Http::StreamResetReason) {
   std::cout << "********  reset stream\n";
   // TODO(oschaaf):
-  //ADD_FAILURE();
+  // ADD_FAILURE();
   delete this;
 }
 
@@ -172,7 +171,7 @@ void CodecClient::onData(Buffer::Instance& data) {
   }
 
   if (protocol_error) {
-    //host_->cluster().stats().upstream_cx_protocol_error_.inc();
+    // host_->cluster().stats().upstream_cx_protocol_error_.inc();
   }
 }
 
@@ -185,7 +184,7 @@ CodecClientProd::CodecClientProd(Type type, Network::ClientConnectionPtr&& conne
     break;
   }
   case Type::HTTP2: {
-    //codec_ = std::make_unique<Http2::ClientConnectionImpl>(
+    // codec_ = std::make_unique<Http2::ClientConnectionImpl>(
     //    *connection_, *this, host->cluster().statsScope(), host->cluster().http2Settings());
     break;
   }
