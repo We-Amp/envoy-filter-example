@@ -11,12 +11,17 @@ OptionsImpl::OptionsImpl(int argc, const char* const* argv,
     : Envoy::OptionsImpl(1, argv, hot_restart_version_cb, default_log_level) {
   (void)argc;
 
-  TCLAP::CmdLine cmd("nighthawk", ' ', "PoC");
+  TCLAP::CmdLine cmd("benchmarking", ' ', "PoC");
   // we need to rebuild the command line parsing ourselves here.
   TCLAP::ValueArg<uint64_t> requests_per_second("", "rps",
-                                                "Maximum number of stats gauges and counters "
-                                                "that can be allocated in shared memory.",
+                                                "target requests per second",
                                                 false, 500 /*default qps*/, "uint64_t", cmd);
+  TCLAP::ValueArg<uint64_t> connections("", "connections",
+                                                "number of connections to use",
+                                                false, 1 , "uint64_t", cmd);
+  TCLAP::ValueArg<uint64_t> duration("", "duration",
+                                                "duration (seconds)",
+                                                false, 5, "uint64_t", cmd);
 
   cmd.setExceptionHandling(false);
   try {
@@ -38,6 +43,8 @@ OptionsImpl::OptionsImpl(int argc, const char* const* argv,
   }
 
   requests_per_second_ = requests_per_second.getValue();
+  connections_ = connections.getValue();
+  duration_ = duration.getValue();
 }
 OptionsImpl::OptionsImpl(const std::string& service_cluster, const std::string& service_node,
                          const std::string& service_zone, spdlog::level::level_enum log_level)
@@ -46,6 +53,8 @@ OptionsImpl::OptionsImpl(const std::string& service_cluster, const std::string& 
 BenchmarkingCommandLineOptionsPtr OptionsImpl::toBenchmarkingCommandLineOptions() const {
   auto options = std::make_unique<benchmarking::CommandLineOptions>();
   options->set_requests_per_second(requests_per_second_);
+  options->set_connections(connections_);
+  options->set_duration(duration_);
   return options;
 }
 

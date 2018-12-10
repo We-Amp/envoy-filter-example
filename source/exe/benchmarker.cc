@@ -49,12 +49,21 @@ void Benchmarker::pulse(bool from_timer) {
     ENVOY_LOG(trace, "done {}/{} | rps {} | due {} @ {}", requests_, callback_count_, current_rps_,
               due_requests, ms_dur);
   }
+
+  if ((dur - duration_) > std::chrono::seconds(5)) {
+    ENVOY_LOG(info, "requested: {} completed:{} rps: {}", requests_, callback_count_, current_rps_);
+    ENVOY_LOG(error, "Benchmarking timed out. {} queries in {} ms", callback_count_, ms_dur);
+    dispatcher_->exit();
+    return;
+  }
+
   while (requests_ < max_requests && due_requests-- > 0 && codec_clients_.size() > 0) {
     ++requests_;
     performRequest([this, ms_dur, max_requests](std::chrono::nanoseconds nanoseconds) {
       ASSERT(nanoseconds.count() > 0);
       results_.push_back(nanoseconds.count());
       if (++callback_count_ == max_requests) {
+        ENVOY_LOG(info, "requested: {} completed:{} rps: {}", requests_, callback_count_, current_rps_);
         ENVOY_LOG(info, "Benchmark done. {} queries in {} ms", callback_count_, ms_dur);
         dispatcher_->exit();
         return;
@@ -72,7 +81,7 @@ void Benchmarker::run() {
   start_ = std::chrono::steady_clock::now();
   setupCodecClients(connections_);
 
-  ENVOY_LOG(info, "target rps: {}, #connections: {}", rps_, connections_);
+  ENVOY_LOG(info, "target rps: {}, #connections: {}, duration: {} seconds.", rps_, connections_, duration_.count());
 
   timer_ = dispatcher_->createTimer([this]() { pulse(true); });
   timer_->enableTimer(timer_resolution);

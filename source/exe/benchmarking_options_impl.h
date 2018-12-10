@@ -18,6 +18,8 @@ namespace Benchmarking {
 
 typedef std::unique_ptr<benchmarking::CommandLineOptions> BenchmarkingCommandLineOptionsPtr;
 
+// We derive from envoy's option implementation, in an attempt
+// to leverage envoy's option handling infra, which failed.
 class OptionsImpl : public Envoy::OptionsImpl {
 public:
   OptionsImpl(int argc, const char* const* argv,
@@ -31,9 +33,13 @@ public:
   virtual BenchmarkingCommandLineOptionsPtr toBenchmarkingCommandLineOptions() const;
 
   uint64_t requests_per_second() { return requests_per_second_; }
+  uint64_t connections() { return connections_; }
+  std::chrono::seconds duration() { return std::chrono::seconds(duration_); }
 
 private:
   uint64_t requests_per_second_;
+  uint64_t connections_;
+  uint64_t duration_;
 };
 
 } // namespace Benchmarking
