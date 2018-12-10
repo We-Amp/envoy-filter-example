@@ -46,7 +46,7 @@ Runtime::LoaderPtr ProdComponentFactory::createRuntime(Server::Instance& server,
   return Server::InstanceUtil::createRuntime(server, config);
 }
 
-MainCommonBase::MainCommonBase(OptionsImpl& options, Event::TimeSystem& time_system,
+MainCommonBase::MainCommonBase(Benchmarking::OptionsImpl& options, Event::TimeSystem& time_system,
                                TestHooks& test_hooks, Service::ComponentFactory& component_factory,
                                std::unique_ptr<Runtime::RandomGenerator>&& random_generator,
                                Thread::ThreadFactory& thread_factory)

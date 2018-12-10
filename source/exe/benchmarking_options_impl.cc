@@ -1,0 +1,55 @@
+#include "exe/benchmarking_options_impl.h"
+
+#include "tclap/CmdLine.h"
+
+namespace Benchmarking {
+
+
+// TODO(oschaaf): We hide the real argc from the base class.
+OptionsImpl::OptionsImpl(int argc, const char* const* argv, const Envoy::OptionsImpl::HotRestartVersionCb& hot_restart_version_cb,
+			 spdlog::level::level_enum default_log_level) :
+  Envoy::OptionsImpl(1, argv, hot_restart_version_cb, default_log_level) {
+    (void)argc;
+
+  TCLAP::CmdLine cmd("nighthawk", ' ', "PoC");
+    // we need to rebuild the command line parsing ourselves here.
+  TCLAP::ValueArg<uint64_t> requests_per_second("", "rps",
+                                      "Maximum number of stats gauges and counters "
+                                      "that can be allocated in shared memory.",
+                                      false, 500 /*default qps*/, "uint64_t", cmd);
+
+  cmd.setExceptionHandling(false);
+  try {
+    cmd.parse(argc, argv);
+    // TODO(oschaaf): can't access count_
+    cmd.getArgList().size();
+  } catch (TCLAP::ArgException& e) {
+    try {
+      cmd.getOutput()->failure(cmd, e);
+    } catch (const TCLAP::ExitException&) {
+      // failure() has already written an informative message to stderr, so all that's left to do
+      // is throw our own exception with the original message.
+      throw Envoy::MalformedArgvException(e.what());
+    }
+  } catch (const TCLAP::ExitException& e) {
+    // parse() throws an ExitException with status 0 after printing the output for --help and
+    // --version.
+    throw Envoy::NoServingException();
+  }
+
+  requests_per_second_ = requests_per_second.getValue();
+
+}
+OptionsImpl::OptionsImpl(const std::string& service_cluster, const std::string& service_node,
+			 const std::string& service_zone, spdlog::level::level_enum log_level) :
+  Envoy::OptionsImpl(service_cluster, service_node, service_zone, log_level) {
+}
+
+
+BenchmarkingCommandLineOptionsPtr OptionsImpl::toBenchmarkingCommandLineOptions() const {
+  auto options = std::make_unique<benchmarking::CommandLineOptions>();
+  options->set_requests_per_second(requests_per_second_);
+  return options;
+}
+
+} // namespace Benchmarking

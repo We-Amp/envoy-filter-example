@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package benchmarking;
+
+import "google/protobuf/duration.proto";
+
+message CommandLineOptions {
+  // See :option:`--rps` for details.
+  uint64 requests_per_second = 1;
+}

@@ -50,7 +50,7 @@ using namespace Envoy::Server;
 namespace Benchmark {
 namespace Service {
 
-InstanceImpl::InstanceImpl(Options& options, Event::TimeSystem& time_system,
+InstanceImpl::InstanceImpl(Benchmarking::OptionsImpl& options, Event::TimeSystem& time_system,
                            Network::Address::InstanceConstSharedPtr local_address, TestHooks& hooks,
                            HotRestart& restarter, Stats::StoreRoot& store,
                            Thread::BasicLockable& access_log_lock,
@@ -178,7 +178,7 @@ bool InstanceImpl::healthCheckFailed() { return server_stats_->live_.value() == 
 
 InstanceUtil::BootstrapVersion
 InstanceUtil::loadBootstrapConfig(envoy::config::bootstrap::v2::Bootstrap& bootstrap,
-                                  Options& options) {
+                                  Benchmarking::OptionsImpl& options) {
   try {
     if (!options.configPath().empty()) {
       MessageUtil::loadFromFile(options.configPath(), bootstrap);
@@ -206,7 +206,7 @@ InstanceUtil::loadBootstrapConfig(envoy::config::bootstrap::v2::Bootstrap& boots
   return BootstrapVersion::V1;
 }
 
-void InstanceImpl::initialize(Options& options,
+void InstanceImpl::initialize(Benchmarking::OptionsImpl& options,
                               Network::Address::InstanceConstSharedPtr local_address,
                               ComponentFactory& component_factory) {
   ENVOY_LOG(info, "initializing epoch {} (hot restart version={})", options.restartEpoch(),
@@ -396,7 +396,7 @@ void InstanceImpl::loadServerFlags(const absl::optional<std::string>& flags_path
 
 uint64_t InstanceImpl::numConnections() { return listener_manager_->numConnections(); }
 
-RunHelper::RunHelper(Instance& instance, Options& options, Event::Dispatcher& dispatcher,
+RunHelper::RunHelper(Instance& instance, Benchmarking::OptionsImpl& options, Event::Dispatcher& dispatcher,
                      Upstream::ClusterManager& cm, AccessLog::AccessLogManager& access_log_manager,
                      InitManagerImpl& init_manager, OverloadManager& overload_manager,
                      std::function<void()> workers_start_cb) {
@@ -464,7 +464,7 @@ void InstanceImpl::run() {
   ENVOY_LOG(info, "starting main dispatch loop");
   auto watchdog = guard_dog_->createWatchDog(Thread::currentThreadId());
   watchdog->startWatchdog(*dispatcher_);
-  Benchmarker benchmarker(*dispatcher_, 1, 4000 /*rps*/, std::chrono::seconds(5),
+  Benchmarker benchmarker(*dispatcher_, 1, options_.requests_per_second(), std::chrono::seconds(5),
     Http::Headers::get().MethodValues.Get, "/", "127.0.0.1");
   benchmarker.run();
   ENVOY_LOG(info, "main dispatch loop exited");

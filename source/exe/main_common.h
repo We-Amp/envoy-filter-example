@@ -8,7 +8,8 @@
 #include "common/stats/thread_local_store.h"
 #include "common/thread_local/thread_local_impl.h"
 
-#include "server/options_impl.h"
+//#include "server/options_impl.h
+#include "exe/benchmarking_options_impl.h"
 #include "server/server.h"
 #include "exe/service.h"
 #include "server/test_hooks.h"
@@ -35,7 +36,7 @@ class MainCommonBase {
 public:
   // Consumer must guarantee that all passed references are alive until this object is
   // destructed.
-  MainCommonBase(OptionsImpl& options, Event::TimeSystem& time_system, TestHooks& test_hooks,
+  MainCommonBase(Benchmarking::OptionsImpl& options, Event::TimeSystem& time_system, TestHooks& test_hooks,
                  Service::ComponentFactory& component_factory,
                  std::unique_ptr<Runtime::RandomGenerator>&& random_generator,
                  Thread::ThreadFactory& thread_factory);
@@ -65,7 +66,7 @@ public:
                     const AdminRequestFn& handler);
 
 protected:
-  Envoy::OptionsImpl& options_;
+  Benchmarking::OptionsImpl& options_;
 
   Service::ComponentFactory& component_factory_;
   Thread::ThreadFactory& thread_factory_;
@@ -110,7 +111,7 @@ private:
   Envoy::TerminateHandler log_on_terminate;
 #endif
 
-  Envoy::OptionsImpl options_;
+  Benchmarking::OptionsImpl options_;
   Event::RealTimeSystem real_time_system_;
   DefaultTestHooks default_test_hooks_;
   ProdComponentFactory prod_component_factory_;
