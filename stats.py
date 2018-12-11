@@ -9,23 +9,13 @@ histogram = HdrHistogram(1, 60 * 60 * 1000, 2)
 
 def pp(histogram, p):
     v = histogram.get_value_at_percentile(p)
-    print("p{} {} us ({})".format(p, v, histogram.get_count_at_value(v)))
+    print("p{}: {} us".format(p, v))
 
 
 def main():
     with open("res.txt") as f:
         content = f.readlines()
 
-    content.pop(0)
-    content.pop(0)
-    content.pop(0)
-    content.pop(0)
-    content.pop(0)
-    content.pop(0)
-    content.pop(0)
-    content.pop(0)
-    content.pop(0)
-    content.pop(0)
     content = [int(x.strip()) for x in content]
     for n in content:
         histogram.record_value(n)
@@ -41,5 +31,5 @@ def main():
     print("var:",statistics.pvariance(content))
     print("pstdev:",statistics.pstdev(content))
 
-    
+
 main()

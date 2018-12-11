@@ -14,18 +14,22 @@
 
 namespace Benchmark {
 
-const auto timer_resolution = std::chrono::milliseconds(2);
+const auto timer_resolution = std::chrono::milliseconds(1);
 
 Benchmarker::Benchmarker(Envoy::Event::Dispatcher& dispatcher, unsigned int connections,
                          unsigned int rps, std::chrono::seconds duration, std::string method,
                          std::string host, std::string path)
     : dispatcher_(&dispatcher), connections_(connections), rps_(rps), duration_(duration),
-      method_(method), host_(host), path_(path), current_rps_(0), requests_(0), callback_count_(0) {
+      method_(method), host_(host), path_(path), current_rps_(0), requests_(0), callback_count_(0),
+      connected_clients_(0), warming_up_(true), max_requests_(rps * duration.count()) {
   results_.reserve(duration.count() * rps);
 }
 
-void Benchmarker::setupCodecClients(unsigned int number_of_clients) {
-  while (codec_clients_.size() < number_of_clients) {
+Benchmarking::Http::CodecClientProd* Benchmarker::setupCodecClients(unsigned int number_of_clients) {
+  int amount = number_of_clients - connected_clients_;
+  Benchmarking::Http::CodecClientProd* client = nullptr;
+
+  while (amount-- > 0) {
     auto source_address = std::make_shared<Network::Address::Ipv4Instance>("127.0.0.1");
     // TODO(oschaaf): RawBufferSocket is leaked on exit.
     auto connection = dispatcher_->createClientConnection(
@@ -33,36 +37,86 @@ void Benchmarker::setupCodecClients(unsigned int number_of_clients) {
         std::make_unique<Network::RawBufferSocket>(), nullptr);
     auto client = new Benchmarking::Http::CodecClientProd(
         Benchmarking::Http::CodecClient::Type::HTTP1, std::move(connection), *dispatcher_);
-    codec_clients_.push(client);
+    connected_clients_++;
+    client->setOnConnect([this, client]() {
+	codec_clients_.push_back(client);
+	pulse(false);
+      });
+    client->setOnClose([this, client]() {
+	//auto it =
+	codec_clients_.erase(std::remove(codec_clients_.begin(), codec_clients_.end(), client),
+			     codec_clients_.end());
+	//delete client;
+	// If the client is not in our list
+	//if (it != codec_clients_.end()) {
+	connected_clients_--;
+	//pulse(false);
+	//}
+      });
+    return nullptr;
   }
+  if (codec_clients_.size() > 0) {
+    client = codec_clients_.front();
+    codec_clients_.pop_front();
+  }
+  return client;
 }
 
 void Benchmarker::pulse(bool from_timer) {
-  int max_requests = rps_ * duration_.count(); // ~ seconds to run if we hit the right rps
   auto now = std::chrono::steady_clock::now();
   auto dur = now - start_;
-  int ms_dur = std::chrono::duration_cast<std::chrono::milliseconds>(dur).count();
-  current_rps_ = requests_ / (ms_dur / 1000.000);
-  int due_requests = ((rps_ - current_rps_)) * (ms_dur / 1000.000);
+  double ms_dur = std::chrono::duration_cast<std::chrono::nanoseconds>(dur).count() / 1000000.0;
+  current_rps_ = requests_ / (ms_dur / 1000.0);
+  int due_requests = ((rps_ - current_rps_)) * (ms_dur / 1000.0);
 
-  if ((requests_ % (max_requests / 10)) == 0) {
-    ENVOY_LOG(trace, "done {}/{} | rps {} | due {} @ {}", requests_, callback_count_, current_rps_,
-              due_requests, ms_dur);
+  if (warming_up_ && dur > std::chrono::seconds(1)) {
+    ENVOY_LOG(info, "warmup completed. requested: {} completed:{} rps: {}", requests_, callback_count_, current_rps_);
+    warming_up_ = false;
+    requests_ = 0;
+    callback_count_ = 0;
+    current_rps_ = 0;
+    results_.clear();
+    start_ = std::chrono::steady_clock::now();
+    nanosleep((const struct timespec[]){{0, 1000000L}}, NULL);
+    pulse(from_timer);
+    return;
   }
-
+/*
   if ((dur - duration_) > std::chrono::seconds(5)) {
     ENVOY_LOG(info, "requested: {} completed:{} rps: {}", requests_, callback_count_, current_rps_);
     ENVOY_LOG(error, "Benchmarking timed out. {} queries in {} ms", callback_count_, ms_dur);
     dispatcher_->exit();
     return;
+  }*/
+
+  // fragile and hacky fast spin loop when we are supposed to be idle.
+  // note that we carefully check that there are no pending connect
+  // events.
+  if (due_requests == 0 && connected_clients_ == codec_clients_.size()) {
+    nanosleep((const struct timespec[]){{0, 500L}}, NULL);
+    timer_->enableTimer(std::chrono::milliseconds(0));
+    return;
   }
 
-  while (requests_ < max_requests && due_requests-- > 0 && codec_clients_.size() > 0) {
+  while (requests_ < max_requests_ && due_requests-- > 0) {
+    auto client = setupCodecClients(connections_);
+    if (client == nullptr) {
+      timer_->enableTimer(std::chrono::milliseconds(timer_resolution));
+      return;
+    }
+
+    //if (!warming_up_ && (requests_ % (max_requests_ / 10)) == 0) {
+      //ENVOY_LOG(trace, "done {}/{} | rps {} | due {} @ {}ms. | client {}", requests_, callback_count_, current_rps_,
+      //        due_requests, ms_dur, connected_clients_);
+    //}
+
     ++requests_;
-    performRequest([this, ms_dur, max_requests](std::chrono::nanoseconds nanoseconds) {
+    performRequest(client, [this, ms_dur](std::chrono::nanoseconds nanoseconds) {
       ASSERT(nanoseconds.count() > 0);
+      // OS: rare latency spikes
+      //ASSERT(nanoseconds.count() < 10000000);
       results_.push_back(nanoseconds.count());
-      if (++callback_count_ == max_requests) {
+      if (++callback_count_ == this->max_requests_) {
         ENVOY_LOG(info, "requested: {} completed:{} rps: {}", requests_, callback_count_, current_rps_);
         ENVOY_LOG(info, "Benchmark done. {} queries in {} ms", callback_count_, ms_dur);
         dispatcher_->exit();
@@ -79,8 +133,6 @@ void Benchmarker::pulse(bool from_timer) {
 
 void Benchmarker::run() {
   start_ = std::chrono::steady_clock::now();
-  setupCodecClients(connections_);
-
   ENVOY_LOG(info, "target rps: {}, #connections: {}, duration: {} seconds.", rps_, connections_, duration_.count());
 
   timer_ = dispatcher_->createTimer([this]() { pulse(true); });
@@ -101,28 +153,16 @@ void Benchmarker::run() {
             (*(minmax.second) / 1000));
 }
 
-void Benchmarker::performRequest(std::function<void(std::chrono::nanoseconds)> cb) {
-  auto client = codec_clients_.front();
-  codec_clients_.pop();
-  // XXX(oschaaf): remoteClosed -- probably not a safe approach
-  // here, but for now let's go with it.
-  // maybe let the client handle this transiently.
-  // Also, note that we explicitly do not measure connection setup
-  // latency here.
-  while (client->remoteClosed()) {
-    delete client;
-    setupCodecClients(connections_);
-    client = codec_clients_.front();
-    codec_clients_.pop();
-  }
-
+void Benchmarker::performRequest(Benchmarking::Http::CodecClientProd* client,
+				   std::function<void(std::chrono::nanoseconds)> cb) {
+  ASSERT(client);
   ASSERT(!client->remoteClosed());
   auto start = std::chrono::steady_clock::now();
   // response self-destructs.
   Benchmarking::BufferingStreamDecoder* response =
       new Benchmarking::BufferingStreamDecoder([this, cb, start, client]() -> void {
         auto dur = std::chrono::steady_clock::now() - start;
-        codec_clients_.push(client);
+        codec_clients_.push_back(client);
         cb(dur);
       });
 

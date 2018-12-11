@@ -143,7 +143,12 @@ public:
   bool remoteClosed() const { return remote_closed_; }
 
   Type type() const { return type_; }
-
+  void setOnConnect(std::function<void()> cb) {
+    cb_onConnect_ = cb;
+  }
+  void setOnClose(std::function<void()> cb) {
+    cb_onClose_ = cb;
+  }
 protected:
   /**
    * Create a codec client and connect to a remote host/port.
@@ -165,6 +170,18 @@ protected:
     close();
   }
 
+  void onConnect() {
+    // TODO(oschaaf): figure out why this one isn't set.
+    if (cb_onConnect_ != nullptr) {
+      cb_onConnect_();
+    }
+  }
+  void onClose() {
+    if (cb_onClose_ != nullptr) {
+      cb_onClose_();
+    }
+  }
+
   void disableIdleTimer() {
     if (idle_timer_ != nullptr) {
       idle_timer_->disableTimer();
@@ -183,6 +200,8 @@ protected:
   // Upstream::HostDescriptionConstSharedPtr host_;
   Event::TimerPtr idle_timer_;
   const absl::optional<std::chrono::milliseconds> idle_timeout_;
+  std::function<void()> cb_onConnect_;
+  std::function<void()> cb_onClose_;
 
 private:
   /**

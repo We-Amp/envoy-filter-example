@@ -56,7 +56,9 @@ namespace Http {
 CodecClient::CodecClient(Type type, Network::ClientConnectionPtr&& connection,
                          Event::Dispatcher& dispatcher)
     : type_(type), connection_(std::move(connection)),
-      idle_timeout_(std::chrono::milliseconds(30000) /*host_->cluster().idleTimeout()*/) {
+      idle_timeout_(std::chrono::milliseconds(30000) /*host_->cluster().idleTimeout()*/),
+      cb_onConnect_(nullptr),
+      cb_onClose_(nullptr) {
   // Make sure upstream connections process data and then the FIN, rather than processing
   // TCP disconnects immediately. (see https://github.com/envoyproxy/envoy/issues/1679 for details)
   connection_->detectEarlyCloseWhenReadDisabled(false);
@@ -104,6 +106,7 @@ void CodecClient::onEvent(Network::ConnectionEvent event) {
   if (event == Network::ConnectionEvent::Connected) {
     ENVOY_CONN_LOG(debug, "connected", *connection_);
     connected_ = true;
+    onConnect();
   }
 
   if (event == Network::ConnectionEvent::RemoteClose) {
@@ -129,6 +132,10 @@ void CodecClient::onEvent(Network::ConnectionEvent event) {
           connected_ ? StreamResetReason::ConnectionTermination
                      : StreamResetReason::ConnectionFailure);
     }
+    onClose();
+    // wipe out the callbacks
+    //connection_->removeConnectionCallbacks(*this);
+    cb_onClose_ = nullptr;
   }
 }
 

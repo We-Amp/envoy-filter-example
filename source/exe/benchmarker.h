@@ -1,7 +1,7 @@
 #pragma once
 
 #include <functional>
-#include <queue>
+#include <deque>
 #include <string>
 
 #include "exe/codec_client.h"
@@ -20,8 +20,9 @@ public:
 
 private:
   void pulse(bool from_timer);
-  void setupCodecClients(unsigned int number_of_clients);
-  void performRequest(std::function<void(std::chrono::nanoseconds)> cb);
+  Benchmarking::Http::CodecClientProd* setupCodecClients(unsigned int number_of_clients);
+  void performRequest(Benchmarking::Http::CodecClientProd* client,
+		      std::function<void(std::chrono::nanoseconds)> cb);
 
   Envoy::Event::Dispatcher* dispatcher_;
   unsigned int connections_;
@@ -32,11 +33,14 @@ private:
   std::string path_;
   std::chrono::steady_clock::time_point start_;
   unsigned int current_rps_;
-  std::queue<Benchmarking::Http::CodecClientProd*> codec_clients_;
+  std::deque<Benchmarking::Http::CodecClientProd*> codec_clients_;
   Event::TimerPtr timer_;
   int requests_;
   int callback_count_;
   std::vector<int> results_;
+  unsigned int connected_clients_;
+  bool warming_up_;
+  int max_requests_;
 };
 
 } // namespace Benchmark

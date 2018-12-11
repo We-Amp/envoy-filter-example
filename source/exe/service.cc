@@ -164,7 +164,7 @@ void InstanceImpl::flushStats() {
     InstanceUtil::flushMetricsToSinks(config_.statsSinks(), stats_store_.source());
     // TODO(ramaraochavali): consider adding different flush interval for histograms.
     if (stat_flush_timer_ != nullptr) {
-      stat_flush_timer_->enableTimer(config_.statsFlushInterval());
+      //stat_flush_timer_->enableTimer(config_.statsFlushInterval());
     }
   });
 }
@@ -325,10 +325,10 @@ void InstanceImpl::initialize(Benchmarking::OptionsImpl& options,
   // Instruct the listener manager to create the LDS provider if needed. This must be done later
   // because various items do not yet exist when the listener manager is created.
   if (bootstrap_.dynamic_resources().has_lds_config()) {
-    listener_manager_->createLdsApi(bootstrap_.dynamic_resources().lds_config());
+    //listener_manager_->createLdsApi(bootstrap_.dynamic_resources().lds_config());
   }
 
-  if (bootstrap_.has_hds_config()) {
+  if (false && bootstrap_.has_hds_config()) {
     const auto& hds_config = bootstrap_.hds_config();
     async_client_manager_ = std::make_unique<Grpc::AsyncClientManagerImpl>(
         clusterManager(), thread_local_, time_system_, api());
@@ -346,16 +346,16 @@ void InstanceImpl::initialize(Benchmarking::OptionsImpl& options,
 
   // Some of the stat sinks may need dispatcher support so don't flush until the main loop starts.
   // Just setup the timer.
-  stat_flush_timer_ = dispatcher_->createTimer([this]() -> void { flushStats(); });
-  stat_flush_timer_->enableTimer(config_.statsFlushInterval());
+  //stat_flush_timer_ = dispatcher_->createTimer([this]() -> void { flushStats(); });
+  //stat_flush_timer_->enableTimer(config_.statsFlushInterval());
 
   // GuardDog (deadlock detection) object and thread setup before workers are
   // started and before our own run() loop runs.
-  guard_dog_ = std::make_unique<Server::GuardDogImpl>(stats_store_, config_, time_system_, api());
+  //guard_dog_ = std::make_unique<Server::GuardDogImpl>(stats_store_, config_, time_system_, api());
 }
 
 void InstanceImpl::startWorkers() {
-  listener_manager_->startWorkers(*guard_dog_);
+  //listener_manager_->startWorkers(*guard_dog_);
 
   // At this point we are ready to take traffic and all listening ports are up. Notify our parent
   // if applicable that they can stop listening and drain.
@@ -462,15 +462,15 @@ void InstanceImpl::run() {
 
   // Run the main dispatch loop waiting to exit.
   ENVOY_LOG(info, "starting main dispatch loop");
-  auto watchdog = guard_dog_->createWatchDog(Thread::currentThreadId());
-  watchdog->startWatchdog(*dispatcher_);
+  //auto watchdog = guard_dog_->createWatchDog(Thread::currentThreadId());
+  //watchdog->startWatchdog(*dispatcher_);
   Benchmarker benchmarker(*dispatcher_, options_.connections(), options_.requests_per_second(),
                           options_.duration(),
                           Http::Headers::get().MethodValues.Get, "/", "127.0.0.1");
   benchmarker.run();
   ENVOY_LOG(info, "main dispatch loop exited");
-  guard_dog_->stopWatching(watchdog);
-  watchdog.reset();
+  //guard_dog_->stopWatching(watchdog);
+  //watchdog.reset();
 
   terminate();
   run_helper_.reset();
