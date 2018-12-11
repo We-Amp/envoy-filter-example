@@ -25,7 +25,8 @@ Benchmarker::Benchmarker(Envoy::Event::Dispatcher& dispatcher, unsigned int conn
   results_.reserve(duration.count() * rps);
 }
 
-Benchmarking::Http::CodecClientProd* Benchmarker::setupCodecClients(unsigned int number_of_clients) {
+Benchmarking::Http::CodecClientProd*
+Benchmarker::setupCodecClients(unsigned int number_of_clients) {
   int amount = number_of_clients - connected_clients_;
   Benchmarking::Http::CodecClientProd* client = nullptr;
 
@@ -39,20 +40,20 @@ Benchmarking::Http::CodecClientProd* Benchmarker::setupCodecClients(unsigned int
         Benchmarking::Http::CodecClient::Type::HTTP1, std::move(connection), *dispatcher_);
     connected_clients_++;
     client->setOnConnect([this, client]() {
-	codec_clients_.push_back(client);
-	pulse(false);
-      });
+      codec_clients_.push_back(client);
+      pulse(false);
+    });
     client->setOnClose([this, client]() {
-	//auto it =
-	codec_clients_.erase(std::remove(codec_clients_.begin(), codec_clients_.end(), client),
-			     codec_clients_.end());
-	//delete client;
-	// If the client is not in our list
-	//if (it != codec_clients_.end()) {
-	connected_clients_--;
-	//pulse(false);
-	//}
-      });
+      // auto it =
+      codec_clients_.erase(std::remove(codec_clients_.begin(), codec_clients_.end(), client),
+                           codec_clients_.end());
+      // delete client;
+      // If the client is not in our list
+      // if (it != codec_clients_.end()) {
+      connected_clients_--;
+      // pulse(false);
+      //}
+    });
     return nullptr;
   }
   if (codec_clients_.size() > 0) {
@@ -71,7 +72,8 @@ void Benchmarker::pulse(bool from_timer) {
 
   // 1.001 seconds to serve the lowest 1 rps threshold
   if (warming_up_ && dur > std::chrono::microseconds(1000001)) {
-    ENVOY_LOG(info, "warmup completed. requested: {} completed:{} rps: {}", requests_, callback_count_, current_rps_);
+    ENVOY_LOG(info, "warmup completed. requested: {} completed:{} rps: {}", requests_,
+              callback_count_, current_rps_);
     warming_up_ = false;
     requests_ = 0;
     callback_count_ = 0;
@@ -106,16 +108,17 @@ void Benchmarker::pulse(bool from_timer) {
       return;
     }
 
-    //if (!warming_up_ && (requests_ % (max_requests_ / 10)) == 0) {
-      //ENVOY_LOG(trace, "done {}/{} | rps {} | due {} @ {}ms. | client {}", requests_, callback_count_, current_rps_,
-      //        due_requests, ms_dur, connected_clients_);
+    // if (!warming_up_ && (requests_ % (max_requests_ / 10)) == 0) {
+    // ENVOY_LOG(trace, "done {}/{} | rps {} | due {} @ {}ms. | client {}", requests_,
+    // callback_count_, current_rps_,
+    //        due_requests, ms_dur, connected_clients_);
     //}
 
     ++requests_;
     performRequest(client, [this, ms_dur](std::chrono::nanoseconds nanoseconds) {
       ASSERT(nanoseconds.count() > 0);
       // OS: rare latency spikes
-      //ASSERT(nanoseconds.count() < 10000000);
+      // ASSERT(nanoseconds.count() < 10000000);
       results_.push_back(nanoseconds.count());
       if (++callback_count_ == this->max_requests_) {
         dispatcher_->exit();
@@ -132,7 +135,8 @@ void Benchmarker::pulse(bool from_timer) {
 
 void Benchmarker::run() {
   start_ = std::chrono::steady_clock::now();
-  ENVOY_LOG(info, "target rps: {}, #connections: {}, duration: {} seconds.", rps_, connections_, duration_.count());
+  ENVOY_LOG(info, "target rps: {}, #connections: {}, duration: {} seconds.", rps_, connections_,
+            duration_.count());
 
   timer_ = dispatcher_->createTimer([this]() { pulse(true); });
   timer_->enableTimer(timer_resolution);
@@ -153,7 +157,7 @@ void Benchmarker::run() {
 }
 
 void Benchmarker::performRequest(Benchmarking::Http::CodecClientProd* client,
-				   std::function<void(std::chrono::nanoseconds)> cb) {
+                                 std::function<void(std::chrono::nanoseconds)> cb) {
   ASSERT(client);
   ASSERT(!client->remoteClosed());
   auto start = std::chrono::steady_clock::now();
@@ -165,7 +169,7 @@ void Benchmarker::performRequest(Benchmarking::Http::CodecClientProd* client,
         cb(dur);
       });
 
-  //client->cork();
+  // client->cork();
   Http::StreamEncoder& encoder = client->newStream(*response);
   Http::HeaderMapImpl headers;
   headers.insertMethod().value(Http::Headers::get().MethodValues.Get);
@@ -173,7 +177,7 @@ void Benchmarker::performRequest(Benchmarking::Http::CodecClientProd* client,
   headers.insertHost().value(std::string("127.0.0.1"));
   headers.insertScheme().value(Http::Headers::get().SchemeValues.Http);
   encoder.encodeHeaders(headers, true);
-  //client->unCork();
+  // client->unCork();
 }
 
 } // namespace Benchmark

@@ -5,7 +5,7 @@
 
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#include <sys/types.h>          /* See NOTES */
+#include <sys/types.h> /* See NOTES */
 #include <sys/socket.h>
 #include "common/network/connection_impl.h"
 
@@ -63,8 +63,7 @@ CodecClient::CodecClient(Type type, Network::ClientConnectionPtr&& connection,
                          Event::Dispatcher& dispatcher)
     : type_(type), connection_(std::move(connection)),
       idle_timeout_(std::chrono::milliseconds(30000) /*host_->cluster().idleTimeout()*/),
-      cb_onConnect_(nullptr),
-      cb_onClose_(nullptr) {
+      cb_onConnect_(nullptr), cb_onClose_(nullptr) {
   // Make sure upstream connections process data and then the FIN, rather than processing
   // TCP disconnects immediately. (see https://github.com/envoyproxy/envoy/issues/1679 for details)
   connection_->detectEarlyCloseWhenReadDisabled(false);
@@ -82,17 +81,20 @@ CodecClient::CodecClient(Type type, Network::ClientConnectionPtr&& connection,
   // We just universally set no delay on connections. Theoretically we might at some point want
   // to make this configurable.
   connection_->noDelay(true);
-  //int one = 1;
-  //setsockopt((dynamic_cast<Envoy::Network::ConnectionImpl*>(connection_.get()))->fd(), SOL_TCP, TCP_QUICKACK, &one, sizeof(one));
+  // int one = 1;
+  // setsockopt((dynamic_cast<Envoy::Network::ConnectionImpl*>(connection_.get()))->fd(), SOL_TCP,
+  // TCP_QUICKACK, &one, sizeof(one));
 }
 
 void CodecClient::cork() {
   int one = 1;
-  setsockopt((dynamic_cast<Envoy::Network::ConnectionImpl*>(connection_.get()))->fd(), SOL_TCP, TCP_CORK, &one, sizeof(one));
+  setsockopt((dynamic_cast<Envoy::Network::ConnectionImpl*>(connection_.get()))->fd(), SOL_TCP,
+             TCP_CORK, &one, sizeof(one));
 }
 void CodecClient::unCork() {
   int zero = 0;
-  setsockopt((dynamic_cast<Envoy::Network::ConnectionImpl*>(connection_.get()))->fd(), SOL_TCP, TCP_CORK, &zero, sizeof(zero));
+  setsockopt((dynamic_cast<Envoy::Network::ConnectionImpl*>(connection_.get()))->fd(), SOL_TCP,
+             TCP_CORK, &zero, sizeof(zero));
 }
 
 CodecClient::~CodecClient() {}
@@ -151,7 +153,7 @@ void CodecClient::onEvent(Network::ConnectionEvent event) {
     }
     onClose();
     // wipe out the callbacks
-    //connection_->removeConnectionCallbacks(*this);
+    // connection_->removeConnectionCallbacks(*this);
     cb_onClose_ = nullptr;
   }
 }

@@ -22,7 +22,7 @@ private:
   void pulse(bool from_timer);
   Benchmarking::Http::CodecClientProd* setupCodecClients(unsigned int number_of_clients);
   void performRequest(Benchmarking::Http::CodecClientProd* client,
-		      std::function<void(std::chrono::nanoseconds)> cb);
+                      std::function<void(std::chrono::nanoseconds)> cb);
 
   Envoy::Event::Dispatcher* dispatcher_;
   unsigned int connections_;

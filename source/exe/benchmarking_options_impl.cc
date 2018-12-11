@@ -13,15 +13,12 @@ OptionsImpl::OptionsImpl(int argc, const char* const* argv,
 
   TCLAP::CmdLine cmd("benchmarking", ' ', "PoC");
   // we need to rebuild the command line parsing ourselves here.
-  TCLAP::ValueArg<uint64_t> requests_per_second("", "rps",
-                                                "target requests per second",
-                                                false, 500 /*default qps*/, "uint64_t", cmd);
-  TCLAP::ValueArg<uint64_t> connections("", "connections",
-                                                "number of connections to use",
-                                                false, 1 , "uint64_t", cmd);
-  TCLAP::ValueArg<uint64_t> duration("", "duration",
-                                                "duration (seconds)",
-                                                false, 5, "uint64_t", cmd);
+  TCLAP::ValueArg<uint64_t> requests_per_second("", "rps", "target requests per second", false,
+                                                500 /*default qps*/, "uint64_t", cmd);
+  TCLAP::ValueArg<uint64_t> connections("", "connections", "number of connections to use", false, 1,
+                                        "uint64_t", cmd);
+  TCLAP::ValueArg<uint64_t> duration("", "duration", "duration (seconds)", false, 5, "uint64_t",
+                                     cmd);
 
   cmd.setExceptionHandling(false);
   try {

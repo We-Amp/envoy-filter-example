@@ -143,14 +143,11 @@ public:
   bool remoteClosed() const { return remote_closed_; }
 
   Type type() const { return type_; }
-  void setOnConnect(std::function<void()> cb) {
-    cb_onConnect_ = cb;
-  }
-  void setOnClose(std::function<void()> cb) {
-    cb_onClose_ = cb;
-  }
+  void setOnConnect(std::function<void()> cb) { cb_onConnect_ = cb; }
+  void setOnClose(std::function<void()> cb) { cb_onClose_ = cb; }
   void cork();
   void unCork();
+
 protected:
   /**
    * Create a codec client and connect to a remote host/port.
