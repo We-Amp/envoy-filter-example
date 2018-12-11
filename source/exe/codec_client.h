@@ -149,6 +149,8 @@ public:
   void setOnClose(std::function<void()> cb) {
     cb_onClose_ = cb;
   }
+  void cork();
+  void unCork();
 protected:
   /**
    * Create a codec client and connect to a remote host/port.

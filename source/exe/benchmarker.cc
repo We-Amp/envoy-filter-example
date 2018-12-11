@@ -69,7 +69,8 @@ void Benchmarker::pulse(bool from_timer) {
   current_rps_ = requests_ / (ms_dur / 1000.0);
   int due_requests = ((rps_ - current_rps_)) * (ms_dur / 1000.0);
 
-  if (warming_up_ && dur > std::chrono::seconds(1)) {
+  // 1.001 seconds to serve the lowest 1 rps threshold
+  if (warming_up_ && dur > std::chrono::microseconds(1000001)) {
     ENVOY_LOG(info, "warmup completed. requested: {} completed:{} rps: {}", requests_, callback_count_, current_rps_);
     warming_up_ = false;
     requests_ = 0;
@@ -81,13 +82,13 @@ void Benchmarker::pulse(bool from_timer) {
     pulse(from_timer);
     return;
   }
-/*
-  if ((dur - duration_) > std::chrono::seconds(5)) {
+
+  if ((dur - duration_) >= std::chrono::milliseconds(0)) {
     ENVOY_LOG(info, "requested: {} completed:{} rps: {}", requests_, callback_count_, current_rps_);
     ENVOY_LOG(error, "Benchmarking timed out. {} queries in {} ms", callback_count_, ms_dur);
     dispatcher_->exit();
     return;
-  }*/
+  }
 
   // fragile and hacky fast spin loop when we are supposed to be idle.
   // note that we carefully check that there are no pending connect
@@ -117,8 +118,6 @@ void Benchmarker::pulse(bool from_timer) {
       //ASSERT(nanoseconds.count() < 10000000);
       results_.push_back(nanoseconds.count());
       if (++callback_count_ == this->max_requests_) {
-        ENVOY_LOG(info, "requested: {} completed:{} rps: {}", requests_, callback_count_, current_rps_);
-        ENVOY_LOG(info, "Benchmark done. {} queries in {} ms", callback_count_, ms_dur);
         dispatcher_->exit();
         return;
       }
@@ -166,6 +165,7 @@ void Benchmarker::performRequest(Benchmarking::Http::CodecClientProd* client,
         cb(dur);
       });
 
+  //client->cork();
   Http::StreamEncoder& encoder = client->newStream(*response);
   Http::HeaderMapImpl headers;
   headers.insertMethod().value(Http::Headers::get().MethodValues.Get);
@@ -173,6 +173,7 @@ void Benchmarker::performRequest(Benchmarking::Http::CodecClientProd* client,
   headers.insertHost().value(std::string("127.0.0.1"));
   headers.insertScheme().value(Http::Headers::get().SchemeValues.Http);
   encoder.encodeHeaders(headers, true);
+  //client->unCork();
 }
 
 } // namespace Benchmark

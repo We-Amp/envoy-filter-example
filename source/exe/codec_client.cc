@@ -3,6 +3,12 @@
 #include <cstdint>
 #include <memory>
 
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/types.h>          /* See NOTES */
+#include <sys/socket.h>
+#include "common/network/connection_impl.h"
+
 #include "common/common/enum_to_int.h"
 #include "common/http/exception.h"
 #include "common/http/http1/codec_impl.h"
@@ -76,6 +82,17 @@ CodecClient::CodecClient(Type type, Network::ClientConnectionPtr&& connection,
   // We just universally set no delay on connections. Theoretically we might at some point want
   // to make this configurable.
   connection_->noDelay(true);
+  //int one = 1;
+  //setsockopt((dynamic_cast<Envoy::Network::ConnectionImpl*>(connection_.get()))->fd(), SOL_TCP, TCP_QUICKACK, &one, sizeof(one));
+}
+
+void CodecClient::cork() {
+  int one = 1;
+  setsockopt((dynamic_cast<Envoy::Network::ConnectionImpl*>(connection_.get()))->fd(), SOL_TCP, TCP_CORK, &one, sizeof(one));
+}
+void CodecClient::unCork() {
+  int zero = 0;
+  setsockopt((dynamic_cast<Envoy::Network::ConnectionImpl*>(connection_.get()))->fd(), SOL_TCP, TCP_CORK, &zero, sizeof(zero));
 }
 
 CodecClient::~CodecClient() {}
