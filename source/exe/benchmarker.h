@@ -14,8 +14,7 @@ namespace Benchmark {
 class Benchmarker : Envoy::Logger::Loggable<Envoy::Logger::Id::main> {
 public:
   Benchmarker(Envoy::Event::Dispatcher& dispatcher, unsigned int connections, unsigned int rps,
-              std::chrono::seconds duration, std::string method, std::string host,
-              std::string path);
+              std::chrono::seconds duration, std::string method, std::string host);
   void run();
 
 private:
@@ -30,6 +29,7 @@ private:
   std::chrono::seconds duration_;
   std::string method_;
   std::string host_;
+  unsigned int port_;
   std::string path_;
   std::chrono::steady_clock::time_point start_;
   unsigned int current_rps_;

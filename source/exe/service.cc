@@ -466,8 +466,8 @@ void InstanceImpl::run() {
   // auto watchdog = guard_dog_->createWatchDog(Thread::currentThreadId());
   // watchdog->startWatchdog(*dispatcher_);
   Benchmarker benchmarker(*dispatcher_, options_.connections(), options_.requests_per_second(),
-                          options_.duration(), Http::Headers::get().MethodValues.Get, "/",
-                          "127.0.0.1");
+                          options_.duration(), Http::Headers::get().MethodValues.Get,
+                          "http://127.0.0.1:10000/");
   benchmarker.run();
   ENVOY_LOG(info, "main dispatch loop exited");
   // guard_dog_->stopWatching(watchdog);
