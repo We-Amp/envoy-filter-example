@@ -7,10 +7,10 @@
 #include <iostream>
 
 #include "common/http/header_map_impl.h"
+#include "common/http/utility.h"
 #include "common/network/address_impl.h"
 #include "common/network/raw_buffer_socket.h"
 #include "common/network/utility.h"
-#include "common/http/utility.h"
 #include "envoy/network/dns.h"
 
 namespace Benchmark {
@@ -21,13 +21,32 @@ Benchmarker::Benchmarker(Envoy::Event::Dispatcher& dispatcher, unsigned int conn
                          unsigned int rps, std::chrono::seconds duration, std::string method,
                          std::string uri)
     : dispatcher_(&dispatcher), connections_(connections), rps_(rps), duration_(duration),
-      method_(method), host_(""), path_(""), current_rps_(0), requests_(0), callback_count_(0),
-      connected_clients_(0), warming_up_(true), max_requests_(rps * duration.count()) {
+      method_(method), is_https_(false), host_(""), path_(""), current_rps_(0), requests_(0),
+      callback_count_(0), connected_clients_(0), warming_up_(true),
+      max_requests_(rps * duration.count()), dns_failure_(true) {
+  // preallocate anticipaged space needed for results.
   results_.reserve(duration.count() * rps);
+
+  // parse incoming uri into fields that we need.
+  // TODO(oschaaf): refactor. also input validation, etc.
   absl::string_view host, path;
   Envoy::Http::Utility::extractHostPathFromUri(uri, host, path);
   host_ = std::string(host);
   path_ = std::string(path);
+
+  size_t colon_index = host_.find(':');
+  is_https_ = uri.find("https://") == 0;
+
+  if (colon_index == std::string::npos) {
+    port_ = is_https_ ? 443 : 80;
+  } else {
+    std::string tcp_url = fmt::format("tcp://{}", this->host_);
+    port_ = Network::Utility::portFromTcpUrl(tcp_url);
+    host_ = host_.substr(0, colon_index);
+  }
+
+  ENVOY_LOG(debug, "uri {} -> is_https [{}] | host [{}] | path [{}] | port [{}]", uri, is_https_,
+            host_, path_, port_);
 }
 
 Benchmarking::Http::CodecClientProd*
@@ -36,9 +55,8 @@ Benchmarker::setupCodecClients(unsigned int number_of_clients) {
   Benchmarking::Http::CodecClientProd* client = nullptr;
 
   while (amount-- > 0) {
-    auto source_address = std::make_shared<Network::Address::Ipv4Instance>("127.0.0.1");
     auto connection = dispatcher_->createClientConnection(
-        Network::Utility::resolveUrl(fmt::format("tcp://{}", host_)), source_address,
+        target_address_, Network::Address::InstanceConstSharedPtr(),
         std::make_unique<Network::RawBufferSocket>(), nullptr);
     auto client = new Benchmarking::Http::CodecClientProd(
         Benchmarking::Http::CodecClient::Type::HTTP1, std::move(connection), *dispatcher_);
@@ -110,17 +128,10 @@ void Benchmarker::pulse(bool from_timer) {
       return;
     }
 
-    // if (!warming_up_ && (requests_ % (max_requests_ / 10)) == 0) {
-    // ENVOY_LOG(trace, "done {}/{} | rps {} | due {} @ {}ms. | client {}", requests_,
-    // callback_count_, current_rps_,
-    //        due_requests, ms_dur, connected_clients_);
-    //}
-
     ++requests_;
+
     performRequest(client, [this, ms_dur](std::chrono::nanoseconds nanoseconds) {
       ASSERT(nanoseconds.count() > 0);
-      // OS: rare latency spikes
-      // ASSERT(nanoseconds.count() < 10000000);
       results_.push_back(nanoseconds.count());
       if (++callback_count_ == this->max_requests_) {
         dispatcher_->exit();
@@ -135,37 +146,38 @@ void Benchmarker::pulse(bool from_timer) {
   }
 }
 
-void Benchmarker::run() {
-  start_ = std::chrono::steady_clock::now();
-  std::string logo("\n\
-%%%&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&%%\n\
-&&&&&&&&&&&&&&&&&&&&&&&&&&&&.&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&%%%\n\
-&&&&&&&&&&&&&&&&&&&&&&&&&&&,@&&&&&&&&&&&&&&&&&&&&&&&&&&&&&%%%  \n\
-&&*****(&&&%&&&&&&&&&&&&&&&&&.&&&&&&&&&%(&&&&&&&&&&&&&&&&&%%%%%\n\
-%%&//*****#&&&&&&&&&&&&&&&&&&/,&&&&&&((&&&&&&&&&&&&&&&&&&&%%%%%\n\
-&&&&&********(&&&&&&&&&&&&&&&&.(&&&//&&&&&&&&&&&&&&&&&&&&&&&&%%\n\
-&&&&&&/*********(&&%*((//(##((..%(/&&&&&&&&&&&&&&&@&&&&&&%%%%%%\n\
-&&&&&&&&**********(((**,////(*//#**/&&&&@@@@&&&&&&&%%%%%%%%%%%%\n\
-&&&&&&&&&&******////*,,,(//(///*,(/****%&&&&&&&&&%&&&%%%%%%%%%%\n\
-&&&&&&&&&&&/****/#(/**,*((//,*,.. .    ,*,(&&&&&&&&&%%%%%%%%%%%\n\
-&&&&&&&&&&&&&***//...,,*(/*//, .,,    ...,,#&&&&&%%%%%%%%%%%%%%\n\
-&&&&&&&&&&&&@*(@*,...///%&.....,     .. .,,,,,,,,,,,,,,,,,*#%  \n\
-&&@@@&&&&&&&&&&&/@@@*///#&&,...   .      , .,,,,,,........,,#%#\n\
-%%%%&&&&&&&&&&&&&&**//(#&&.,,.*             ,,,,...,,,/##%%###(\n\
-&&&&%&&&&&&&&%%&%%%((##%%.*& ..             .,,,,(#(///((#(((((\n\
-%%%%%%%%%%%%#######(####(&%/  .           .(########(((#(((((((\n\
-###(((%######%%%%%%%%%%%&&%   .      (%###%%%#%#####((###((((((\n\
-(########%%%%%%%%%%%%%%%*&.   .(%%%%%%%%#%%#%%%###########(##((\n\
-######%#%##%%%#%%%%%%%%&&%%%%%%%%%%%%%%%%%####%###############(\n\
-#######%%%##%#%%%%%%%%%%%%%%%%%%%%#%#%%%#%################(((((\n\
-#####%##%%%%%%%%%%%%%%%%%%%%%%%%%%%#%%################(((((((((\n");
-  ENVOY_LOG(info, "{}", logo);
-  ENVOY_LOG(info, "Benchmarking {}", this->host_);
+void Benchmarker::run(Network::DnsResolverSharedPtr dns_resolver) {
+  ENVOY_LOG(info, "Benchmarking [{}]", this->host_);
+
+  // TODO(oschaaf): ipv6
+  Network::ActiveDnsQuery* active_dns_query_ = dns_resolver->resolve(
+      host_, Network::DnsLookupFamily::V4Only,
+      [this, &active_dns_query_](
+          const std::list<Network::Address::InstanceConstSharedPtr>&& address_list) -> void {
+        active_dns_query_ = nullptr;
+        ENVOY_LOG(debug, "DNS resolution complete for {} ({} entries).", this->host_,
+                  address_list.size());
+        if (!address_list.empty()) {
+          dns_failure_ = false;
+          target_address_ = Network::Utility::getAddressWithPort(*address_list.front(), port_);
+        } else {
+          ENVOY_LOG(critical, "Could not resolve host [{}]", host_);
+        }
+        dispatcher_->exit();
+      });
+  // Wait for DNS resolution to complete before proceeding.
+  dispatcher_->run(Envoy::Event::Dispatcher::RunType::Block);
+  if (dns_failure_) {
+    exit(1);
+  }
+
   ENVOY_LOG(info, "target rps: {}, #connections: {}, duration: {} seconds.", rps_, connections_,
             duration_.count());
 
+  // Kick off the benchmark run.
   timer_ = dispatcher_->createTimer([this]() { pulse(true); });
   timer_->enableTimer(timer_resolution);
+  start_ = std::chrono::steady_clock::now();
   dispatcher_->run(Envoy::Event::Dispatcher::RunType::Block);
 
   std::ofstream myfile;
@@ -195,7 +207,6 @@ void Benchmarker::performRequest(Benchmarking::Http::CodecClientProd* client,
         cb(dur);
       });
 
-  // client->cork();
   Http::StreamEncoder& encoder = client->newStream(*response);
   Http::HeaderMapImpl headers;
   headers.insertMethod().value(Http::Headers::get().MethodValues.Get);
@@ -203,7 +214,6 @@ void Benchmarker::performRequest(Benchmarking::Http::CodecClientProd* client,
   headers.insertHost().value(std::string(host_));
   headers.insertScheme().value(Http::Headers::get().SchemeValues.Http);
   encoder.encodeHeaders(headers, true);
-  // client->unCork();
 }
 
 } // namespace Benchmark

@@ -5,7 +5,7 @@ import statistics
 
 from hdrh.histogram import HdrHistogram
 
-histogram = HdrHistogram(1, 60 * 60 * 1000, 2)
+histogram = HdrHistogram(1, 60000000, 4)
 
 def pp(histogram, p):
     v = histogram.get_value_at_percentile(p)

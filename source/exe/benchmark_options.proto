@@ -11,4 +11,6 @@ message CommandLineOptions {
   uint64 connections = 2;
   // See :option:`--duration` for details.
   uint64 duration = 3;
+
+  string uri = 4;
 }

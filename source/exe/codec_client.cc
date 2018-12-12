@@ -3,11 +3,11 @@
 #include <cstdint>
 #include <memory>
 
+#include "common/network/connection_impl.h"
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#include <sys/types.h> /* See NOTES */
 #include <sys/socket.h>
-#include "common/network/connection_impl.h"
+#include <sys/types.h> /* See NOTES */
 
 #include "common/common/enum_to_int.h"
 #include "common/http/exception.h"

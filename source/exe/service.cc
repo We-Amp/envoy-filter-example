@@ -126,7 +126,7 @@ Upstream::ClusterManager& InstanceImpl::clusterManager() { return *config_.clust
 Tracing::HttpTracer& InstanceImpl::httpTracer() { return config_.httpTracer(); }
 
 void InstanceImpl::drainListeners() {
-  ENVOY_LOG(info, "closing and draining listeners");
+  ENVOY_LOG(debug, "closing and draining listeners");
   listener_manager_->stopListeners();
   drain_manager_->startDrainSequence(nullptr);
 }
@@ -209,29 +209,29 @@ InstanceUtil::loadBootstrapConfig(envoy::config::bootstrap::v2::Bootstrap& boots
 void InstanceImpl::initialize(Benchmarking::OptionsImpl& options,
                               Network::Address::InstanceConstSharedPtr local_address,
                               ComponentFactory& component_factory) {
-  ENVOY_LOG(info, "initializing epoch {} (hot restart version={})", options.restartEpoch(),
+  ENVOY_LOG(debug, "initializing epoch {} (hot restart version={})", options.restartEpoch(),
             restarter_.version());
 
-  ENVOY_LOG(info, "statically linked extensions:");
-  ENVOY_LOG(info, "  access_loggers: {}",
+  ENVOY_LOG(debug, "statically linked extensions:");
+  ENVOY_LOG(debug, "  access_loggers: {}",
             Registry::FactoryRegistry<Configuration::AccessLogInstanceFactory>::allFactoryNames());
   ENVOY_LOG(
-      info, "  filters.http: {}",
+      debug, "  filters.http: {}",
       Registry::FactoryRegistry<Configuration::NamedHttpFilterConfigFactory>::allFactoryNames());
-  ENVOY_LOG(info, "  filters.listener: {}",
+  ENVOY_LOG(debug, "  filters.listener: {}",
             Registry::FactoryRegistry<
                 Configuration::NamedListenerFilterConfigFactory>::allFactoryNames());
   ENVOY_LOG(
-      info, "  filters.network: {}",
+      debug, "  filters.network: {}",
       Registry::FactoryRegistry<Configuration::NamedNetworkFilterConfigFactory>::allFactoryNames());
-  ENVOY_LOG(info, "  stat_sinks: {}",
+  ENVOY_LOG(debug, "  stat_sinks: {}",
             Registry::FactoryRegistry<Configuration::StatsSinkFactory>::allFactoryNames());
-  ENVOY_LOG(info, "  tracers: {}",
+  ENVOY_LOG(debug, "  tracers: {}",
             Registry::FactoryRegistry<Configuration::TracerFactory>::allFactoryNames());
-  ENVOY_LOG(info, "  transport_sockets.downstream: {}",
+  ENVOY_LOG(debug, "  transport_sockets.downstream: {}",
             Registry::FactoryRegistry<
                 Configuration::DownstreamTransportSocketConfigFactory>::allFactoryNames());
-  ENVOY_LOG(info, "  transport_sockets.upstream: {}",
+  ENVOY_LOG(debug, "  transport_sockets.upstream: {}",
             Registry::FactoryRegistry<
                 Configuration::UpstreamTransportSocketConfigFactory>::allFactoryNames());
 
@@ -275,12 +275,12 @@ void InstanceImpl::initialize(Benchmarking::OptionsImpl& options,
     if (initial_config.admin().accessLogPath().empty()) {
       throw EnvoyException("An admin access log path is required for a listening server.");
     }
-    ENVOY_LOG(info, "admin address: {}", initial_config.admin().address()->asString());
+    ENVOY_LOG(debug, "admin address: {}", initial_config.admin().address()->asString());
     admin_->startHttpListener(initial_config.admin().accessLogPath(), options.adminAddressPath(),
                               initial_config.admin().address(),
                               stats_store_.createScope("listener.admin."));
   } else {
-    ENVOY_LOG(warn, "No admin address given, so no admin HTTP server started.");
+    ENVOY_LOG(debug, "No admin address given, so no admin HTTP server started.");
   }
   config_tracker_entry_ =
       admin_->getConfigTracker().add("bootstrap", [this] { return dumpBootstrapConfig(); });
@@ -367,12 +367,12 @@ void InstanceImpl::startWorkers() {
 Runtime::LoaderPtr InstanceUtil::createRuntime(Instance& server,
                                                Server::Configuration::Initial& config) {
   if (config.runtime()) {
-    ENVOY_LOG(info, "runtime symlink: {}", config.runtime()->symlinkRoot());
-    ENVOY_LOG(info, "runtime subdirectory: {}", config.runtime()->subdirectory());
+    ENVOY_LOG(debug, "runtime symlink: {}", config.runtime()->symlinkRoot());
+    ENVOY_LOG(debug, "runtime subdirectory: {}", config.runtime()->subdirectory());
 
     std::string override_subdirectory =
         config.runtime()->overrideSubdirectory() + "/" + server.localInfo().clusterName();
-    ENVOY_LOG(info, "runtime override subdirectory: {}", override_subdirectory);
+    ENVOY_LOG(debug, "runtime override subdirectory: {}", override_subdirectory);
 
     return std::make_unique<Runtime::DiskBackedLoaderImpl>(
         server.dispatcher(), server.threadLocal(), config.runtime()->symlinkRoot(),
@@ -388,9 +388,9 @@ void InstanceImpl::loadServerFlags(const absl::optional<std::string>& flags_path
     return;
   }
 
-  ENVOY_LOG(info, "server flags path: {}", flags_path.value());
+  ENVOY_LOG(debug, "server flags path: {}", flags_path.value());
   if (api_->fileExists(flags_path.value() + "/drain")) {
-    ENVOY_LOG(info, "starting server in drain mode");
+    ENVOY_LOG(debug, "starting server in drain mode");
     failHealthcheck(true);
   }
 }
@@ -434,7 +434,7 @@ RunHelper::RunHelper(Instance& instance, Benchmarking::OptionsImpl& options,
     // so we pause RDS until we've completed all the callbacks.
     cm.adsMux().pause(Config::TypeUrl::get().RouteConfiguration);
 
-    ENVOY_LOG(info, "all clusters initialized. initializing init manager");
+    ENVOY_LOG(debug, "all clusters initialized. initializing init manager");
 
     // Note: the lamda below should not capture "this" since the RunHelper object may
     // have been destructed by the time it gets executed.
@@ -462,14 +462,15 @@ void InstanceImpl::run() {
                                             [this]() -> void { startWorkers(); });
 
   // Run the main dispatch loop waiting to exit.
-  ENVOY_LOG(info, "starting main dispatch loop");
+  ENVOY_LOG(debug, "starting main dispatch loop");
+
   // auto watchdog = guard_dog_->createWatchDog(Thread::currentThreadId());
   // watchdog->startWatchdog(*dispatcher_);
   Benchmarker benchmarker(*dispatcher_, options_.connections(), options_.requests_per_second(),
                           options_.duration(), Http::Headers::get().MethodValues.Get,
-                          "http://127.0.0.1:10000/");
-  benchmarker.run();
-  ENVOY_LOG(info, "main dispatch loop exited");
+                          options_.uri());
+  benchmarker.run(dns_resolver_);
+  ENVOY_LOG(debug, "main dispatch loop exited");
   // guard_dog_->stopWatching(watchdog);
   // watchdog.reset();
 
@@ -509,7 +510,7 @@ void InstanceImpl::terminate() {
   handler_.reset();
   thread_local_.shutdownThread();
   restarter_.shutdown();
-  ENVOY_LOG(info, "exiting");
+  ENVOY_LOG(debug, "exiting");
   ENVOY_FLUSH_LOG();
 }
 

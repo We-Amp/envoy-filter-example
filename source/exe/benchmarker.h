@@ -1,7 +1,7 @@
 #pragma once
 
-#include <functional>
 #include <deque>
+#include <functional>
 #include <string>
 
 #include "exe/codec_client.h"
@@ -15,7 +15,7 @@ class Benchmarker : Envoy::Logger::Loggable<Envoy::Logger::Id::main> {
 public:
   Benchmarker(Envoy::Event::Dispatcher& dispatcher, unsigned int connections, unsigned int rps,
               std::chrono::seconds duration, std::string method, std::string host);
-  void run();
+  void run(Network::DnsResolverSharedPtr dns_resolver);
 
 private:
   void pulse(bool from_timer);
@@ -28,8 +28,9 @@ private:
   unsigned int rps_;
   std::chrono::seconds duration_;
   std::string method_;
+  bool is_https_;
   std::string host_;
-  unsigned int port_;
+  uint32_t port_;
   std::string path_;
   std::chrono::steady_clock::time_point start_;
   unsigned int current_rps_;
@@ -41,6 +42,8 @@ private:
   unsigned int connected_clients_;
   bool warming_up_;
   int max_requests_;
+  bool dns_failure_;
+  Network::Address::InstanceConstSharedPtr target_address_;
 };
 
 } // namespace Benchmark

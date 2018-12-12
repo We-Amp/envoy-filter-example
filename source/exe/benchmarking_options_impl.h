@@ -35,11 +35,13 @@ public:
   uint64_t requests_per_second() { return requests_per_second_; }
   uint64_t connections() { return connections_; }
   std::chrono::seconds duration() { return std::chrono::seconds(duration_); }
+  std::string uri() { return uri_; }
 
 private:
   uint64_t requests_per_second_;
   uint64_t connections_;
   uint64_t duration_;
+  std::string uri_;
 };
 
 } // namespace Benchmarking

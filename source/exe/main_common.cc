@@ -103,6 +103,13 @@ void MainCommonBase::configureComponentLogLevels() {
     ASSERT(logger_to_change);
     logger_to_change->setLevel(component_log_level.second);
   }
+  // TODO(oschaaf):
+  Logger::Logger* logger_to_change = Logger::Registry::logger("main");
+  logger_to_change->setLevel(spdlog::level::info);
+  logger_to_change = Logger::Registry::logger("config");
+  logger_to_change->setLevel(spdlog::level::warn);
+  logger_to_change = Logger::Registry::logger("upstream");
+  logger_to_change->setLevel(spdlog::level::warn);
 }
 
 bool MainCommonBase::run() {

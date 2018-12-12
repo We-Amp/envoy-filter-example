@@ -19,6 +19,7 @@ OptionsImpl::OptionsImpl(int argc, const char* const* argv,
                                         "uint64_t", cmd);
   TCLAP::ValueArg<uint64_t> duration("", "duration", "duration (seconds)", false, 5, "uint64_t",
                                      cmd);
+  TCLAP::UnlabeledValueArg<std::string> uri("uri", "uri to benchmark", true, "", "uri format", cmd);
 
   cmd.setExceptionHandling(false);
   try {
@@ -42,6 +43,7 @@ OptionsImpl::OptionsImpl(int argc, const char* const* argv,
   requests_per_second_ = requests_per_second.getValue();
   connections_ = connections.getValue();
   duration_ = duration.getValue();
+  uri_ = uri.getValue();
 }
 OptionsImpl::OptionsImpl(const std::string& service_cluster, const std::string& service_node,
                          const std::string& service_zone, spdlog::level::level_enum log_level)
@@ -52,6 +54,7 @@ BenchmarkingCommandLineOptionsPtr OptionsImpl::toBenchmarkingCommandLineOptions(
   options->set_requests_per_second(requests_per_second_);
   options->set_connections(connections_);
   options->set_duration(duration_);
+  options->set_uri(uri_);
   return options;
 }
 
