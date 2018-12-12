@@ -47,6 +47,33 @@ Benchmarker::Benchmarker(Envoy::Event::Dispatcher& dispatcher, unsigned int conn
 
   ENVOY_LOG(debug, "uri {} -> is_https [{}] | host [{}] | path [{}] | port [{}]", uri, is_https_,
             host_, path_, port_);
+
+  // TODO(oschaaf): prep up ssl processing.
+  if (is_https_) {
+    /*ß
+      envoy::api::v2::auth::UpstreamTlsContext tls_context;
+      auto* common_tls_context = tls_context.mutable_common_tls_context();
+      auto* validation_context = common_tls_context->mutable_validation_context();
+      validation_context->mutable_trusted_ca()->set_filename(
+          TestEnvironment::runfilesPath("test/config/integration/certs/upstreamcacert.pem"));
+      if (use_client_cert_) {
+        auto* tls_cert = common_tls_context->add_tls_certificates();
+        tls_cert->mutable_certificate_chain()->set_filename(
+            TestEnvironment::runfilesPath("test/config/integration/certs/clientcert.pem"));
+        tls_cert->mutable_private_key()->set_filename(
+            TestEnvironment::runfilesPath("test/config/integration/certs/clientkey.pem"));
+      }
+      auto cfg = std::make_unique<Ssl::ClientContextConfigImpl>(tls_context, factory_context_);
+
+      mock_cluster_info_->transport_socket_factory_ = std::make_unique<Ssl::ClientSslSocketFactory>(
+          std::move(cfg), context_manager_, *stats_store_);
+      ON_CALL(*mock_cluster_info_, transportSocketFactory())
+          .WillByDefault(ReturnRef(*mock_cluster_info_->transport_socket_factory_));
+      async_client_transport_socket_ =
+          mock_cluster_info_->transport_socket_factory_->createTransportSocket(nullptr);
+      client_ssl_ctx_ = createClientSslTransportSocketFactory({}, context_manager_);
+    */
+  }
 }
 
 Benchmarking::Http::CodecClientProd*
@@ -58,6 +85,7 @@ Benchmarker::setupCodecClients(unsigned int number_of_clients) {
     auto connection = dispatcher_->createClientConnection(
         target_address_, Network::Address::InstanceConstSharedPtr(),
         std::make_unique<Network::RawBufferSocket>(), nullptr);
+    // TODO(oschaaf): implement h/2.
     auto client = new Benchmarking::Http::CodecClientProd(
         Benchmarking::Http::CodecClient::Type::HTTP1, std::move(connection), *dispatcher_);
     connected_clients_++;
@@ -101,18 +129,22 @@ void Benchmarker::pulse(bool from_timer) {
   }
 
   if ((dur - duration_) >= std::chrono::milliseconds(0)) {
+
     ENVOY_LOG(info, "requested: {} completed:{} rps: {}", requests_, callback_count_, current_rps_);
-    ENVOY_LOG(error, "{} ms benmark run completed.", ms_dur);
+    ENVOY_LOG(info, "{} ms benmark run completed.", ms_dur);
     dispatcher_->exit();
     return;
   }
 
   // To increase accuracy we sleep/spin when no requests are due, and
-  // no inbound events are expected.
-  // TODO(oschaaf): this could block timeout events from open connections,
-  // (but those shouldn't influence measurements.)
-  // TODO(oschaaf): more importantly, this may not work well with long
-  // running transactions. Thought: we may want to experiment with driving
+  // no inbound events are expected.(we don't want to delay those!)
+  //
+  // TODO(oschaaf): this could block timeout & close events from open connections.
+  //   (but those shouldn't influence measurements.)
+  // TODO(oschaaf): this will not alway work well:
+  //    E.g: when there are long delays between us writing a request
+  //    and receiving the corresponding notifications of the response stream.
+  // TODO(oschaaf): discuss: we may want to experiment with driving
   // the loop from another thread, e.g. by listening to a file descriptor here
   // and writing single bytes to it from the other thread at a high frequency.
   if (due_requests == 0 && connected_clients_ == codec_clients_.size()) {
@@ -180,6 +212,7 @@ void Benchmarker::run(Network::DnsResolverSharedPtr dns_resolver) {
   start_ = std::chrono::steady_clock::now();
   dispatcher_->run(Envoy::Event::Dispatcher::RunType::Block);
 
+  // TODO(oschaaf): we should only do this on request:
   std::ofstream myfile;
   myfile.open("res.txt");
   for (int r : results_) {
@@ -207,6 +240,9 @@ void Benchmarker::performRequest(Benchmarking::Http::CodecClientProd* client,
         cb(dur);
       });
 
+  // TODO(oschaaf): its possible we can increase accuracy by
+  // writing a precomputed request string directly to the socket
+  // in one go.
   Http::StreamEncoder& encoder = client->newStream(*response);
   Http::HeaderMapImpl headers;
   headers.insertMethod().value(Http::Headers::get().MethodValues.Get);
