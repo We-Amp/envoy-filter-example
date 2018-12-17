@@ -1,0 +1,33 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "/usr/include",
+                "/usr/local/include",
+                "/home/oschaaf/.cache/bazel/_bazel_oschaaf/f5c2fb670ee02eabba2150935f7824fb/**",
+                "${workspaceFolder}/source",
+                "${workspaceFolder}/envoy/source",
+                "${workspaceFolder}/envoy/include",
+                "${workspaceFolder}/envoy/test",
+                "${workspaceFolder}/**"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "clang-x64",
+            "browse": {
+                "path": [
+                    "/usr/include",
+                    "/usr/local/include",
+                    "/home/oschaaf/.cache/bazel/_bazel_oschaaf/f5c2fb670ee02eabba2150935f7824fb/**",
+                    "${workspaceFolder}/**"
+                    ],
+                "limitSymbolsToIncludedHeaders": true,
+                "databaseFilename": ""
+            }
+        }
+    ],
+    "version": 4
+}
