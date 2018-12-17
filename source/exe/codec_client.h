@@ -10,7 +10,6 @@
 #include "envoy/network/connection.h"
 #include "envoy/network/filter.h"
 //#include "envoy/upstream/upstream.h"
-
 #include "common/common/assert.h"
 #include "common/common/linked_object.h"
 #include "common/common/logger.h"
@@ -25,29 +24,29 @@ namespace Benchmarking {
 /**
  * A buffering response decoder used for testing.
  */
-class BufferingStreamDecoder : public Http::StreamDecoder, public Http::StreamCallbacks {
+class BufferingStreamDecoder : public StreamDecoder, public StreamCallbacks {
 public:
   BufferingStreamDecoder(std::function<void()> on_complete_cb) : on_complete_cb_(on_complete_cb) {}
 
   bool complete() { return complete_; }
-  const Http::HeaderMap& headers() { return *headers_; }
+  const HeaderMap& headers() { return *headers_; }
 
   // Http::StreamDecoder
-  void decode100ContinueHeaders(Http::HeaderMapPtr&&) override {}
-  void decodeHeaders(Http::HeaderMapPtr&& headers, bool end_stream) override;
+  void decode100ContinueHeaders(HeaderMapPtr&&) override {}
+  void decodeHeaders(HeaderMapPtr&& headers, bool end_stream) override;
   void decodeData(Buffer::Instance&, bool end_stream) override;
-  void decodeTrailers(Http::HeaderMapPtr&& trailers) override;
-  void decodeMetadata(Http::MetadataMapPtr&&) override {}
+  void decodeTrailers(HeaderMapPtr&& trailers) override;
+  void decodeMetadata(MetadataMapPtr&&) override {}
 
   // Http::StreamCallbacks
-  void onResetStream(Http::StreamResetReason reason) override;
+  void onResetStream(StreamResetReason reason) override;
   void onAboveWriteBufferHighWatermark() override {}
   void onBelowWriteBufferLowWatermark() override {}
 
 private:
   void onComplete();
 
-  Http::HeaderMapPtr headers_;
+  HeaderMapPtr headers_;
   bool complete_{};
   std::function<void()> on_complete_cb_;
 };

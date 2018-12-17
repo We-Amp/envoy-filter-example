@@ -4,12 +4,12 @@
 #include <functional>
 #include <string>
 
-#include "exe/codec_client.h"
-
 #include "common/common/logger.h"
 #include "common/ssl/context_config_impl.h"
 #include "common/ssl/context_manager_impl.h"
 #include "envoy/event/dispatcher.h"
+
+#include "exe/codec_client.h"
 
 namespace Benchmark {
 
@@ -46,7 +46,7 @@ private:
   int max_requests_;
   bool dns_failure_;
   Network::Address::InstanceConstSharedPtr target_address_;
-  Ssl::ContextManagerImpl* context_manager_;
+  // Ssl::ContextManagerImpl* context_manager_;
   Network::TransportSocketFactoryPtr client_ssl_ctx_;
 };
 

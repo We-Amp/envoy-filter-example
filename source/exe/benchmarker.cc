@@ -13,6 +13,11 @@
 #include "common/network/utility.h"
 #include "envoy/network/dns.h"
 
+#include "server/transport_socket_config_impl.h"
+#include "common/ssl/ssl_socket.h"
+#include "envoy/network/transport_socket.h"
+#include "common/stats/isolated_store_impl.h"
+
 namespace Benchmark {
 
 const auto timer_resolution = std::chrono::milliseconds(1);
@@ -50,20 +55,21 @@ Benchmarker::Benchmarker(Envoy::Event::Dispatcher& dispatcher, unsigned int conn
 
   // TODO(oschaaf): prep up ssl processing.
   if (is_https_) {
-    /*ß
+    /*
       envoy::api::v2::auth::UpstreamTlsContext tls_context;
-      auto* common_tls_context = tls_context.mutable_common_tls_context();
-      auto* validation_context = common_tls_context->mutable_validation_context();
-      validation_context->mutable_trusted_ca()->set_filename(
-          TestEnvironment::runfilesPath("test/config/integration/certs/upstreamcacert.pem"));
-      if (use_client_cert_) {
-        auto* tls_cert = common_tls_context->add_tls_certificates();
-        tls_cert->mutable_certificate_chain()->set_filename(
-            TestEnvironment::runfilesPath("test/config/integration/certs/clientcert.pem"));
-        tls_cert->mutable_private_key()->set_filename(
-            TestEnvironment::runfilesPath("test/config/integration/certs/clientkey.pem"));
-      }
-      auto cfg = std::make_unique<Ssl::ClientContextConfigImpl>(tls_context, factory_context_);
+      Envoy::Ssl::ContextManagerImpl manager(dispatcher.timeSystem());
+      //Envoy::Server::Configuration::TransportSocketFactoryContextImpl factory_context(manager, );
+      auto client_cfg = std::make_unique<Envoy::Ssl::ClientContextConfigImpl>(tls_context,
+      factory_context); Stats::IsolatedStoreImpl client_stats_store; Ssl::ClientSslSocketFactory
+      client_ssl_socket_factory(std::move(client_cfg), manager, client_stats_store);
+*/
+
+    // Envoy::Server::Configuration::TransportSocketFactoryContextImpl factory_context(
+    //    ssl_context_manager, *scope, cm, local_info, dispatcher, random, stats);
+    // Envoy::Stats::ScopePtr scope = stats.createScope(fmt::format("cluster.{}.", cluster.name()));
+
+    // auto cfg = std::make_unique<Ssl::ClientContextConfigImpl>(tls_context, factory_context_);
+    /*
 
       mock_cluster_info_->transport_socket_factory_ = std::make_unique<Ssl::ClientSslSocketFactory>(
           std::move(cfg), context_manager_, *stats_store_);
@@ -82,9 +88,29 @@ Benchmarker::setupCodecClients(unsigned int number_of_clients) {
   Benchmarking::Http::CodecClientProd* client = nullptr;
 
   while (amount-- > 0) {
-    auto connection = dispatcher_->createClientConnection(
-        target_address_, Network::Address::InstanceConstSharedPtr(),
-        std::make_unique<Network::RawBufferSocket>(), nullptr);
+    Network::ClientConnectionPtr connection;
+
+    if (!is_https_) {
+      connection = dispatcher_->createClientConnection(
+          target_address_, Network::Address::InstanceConstSharedPtr(),
+          std::make_unique<Network::RawBufferSocket>(), nullptr);
+    } else {
+      /*
+      envoy::api::v2::auth::UpstreamTlsContext tls_context;
+      Ssl::ContextManagerImpl manager(dispatcher_->timeSystem());
+      Stats::IsolatedStoreImpl stats;
+      Stats::ScopePtr scope = stats.createScope("sslclient.");
+      Server::Configuration::TransportSocketFactoryContextImpl factory_context(
+        manager, *scope, cm, local_info, dispatcher, random, stats);
+
+      Ssl::ClientContextConfigImpl cfg(tls_context, factory_context);
+      Ssl::ClientContextSharedPtr ctx(new Ssl::ClientContextImpl(*scope, cfg,
+      dispatcher_->timeSystem())); Network::TransportSocketOptionsSharedPtr
+      transport_socket_options; connection = dispatcher_->createClientConnection( target_address_,
+      Network::Address::InstanceConstSharedPtr(), std::make_unique<Ssl::SslSocket>(ctx,
+      Ssl::InitialState::Client, transport_socket_options), nullptr);*/
+    };
+
     // TODO(oschaaf): implement h/2.
     auto client = new Benchmarking::Http::CodecClientProd(
         Benchmarking::Http::CodecClient::Type::HTTP1, std::move(connection), *dispatcher_);
@@ -162,7 +188,7 @@ void Benchmarker::pulse(bool from_timer) {
 
     ++requests_;
 
-    performRequest(client, [this, ms_dur](std::chrono::nanoseconds nanoseconds) {
+    performRequest(client, [this](std::chrono::nanoseconds nanoseconds) {
       ASSERT(nanoseconds.count() > 0);
       results_.push_back(nanoseconds.count());
       if (++callback_count_ == this->max_requests_) {

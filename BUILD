@@ -61,6 +61,20 @@ envoy_cc_test(
     ],
 )
 
+
+
+envoy_cc_test(
+    name = "benchmark_test",
+    srcs = ["echo2_integration_test.cc"],
+    data =  ["echo2_server.yaml"],
+    repository = "@envoy",
+    deps = [
+        ":echo2_config",
+        "@envoy//test/integration:integration_lib"
+    ],
+)
+
+
 sh_test(
     name = "envoy_binary_test",
     srcs = ["envoy_binary_test.sh"],
