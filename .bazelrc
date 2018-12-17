@@ -1,1 +1,1 @@
-import %workspace%/envoy/.bazelrc
+import %workspace%/envoy/tools/bazel.rc
