@@ -5,7 +5,7 @@
             "includePath": [
                 "/usr/include",
                 "/usr/local/include",
-                "/home/oschaaf/.cache/bazel/_bazel_oschaaf/f5c2fb670ee02eabba2150935f7824fb/**",
+                "/home/oschaaf/.cache/bazel/_bazel_oschaaf/89044868b715419473ecced8561a5d13/**",
                 "${workspaceFolder}/source",
                 "${workspaceFolder}/envoy/source",
                 "${workspaceFolder}/envoy/include",
@@ -21,7 +21,7 @@
                 "path": [
                     "/usr/include",
                     "/usr/local/include",
-                    "/home/oschaaf/.cache/bazel/_bazel_oschaaf/f5c2fb670ee02eabba2150935f7824fb/**",
+                    "/home/oschaaf/.cache/bazel/_bazel_oschaaf/89044868b715419473ecced8561a5d13/**",
                     "${workspaceFolder}/**"
                     ],
                 "limitSymbolsToIncludedHeaders": true,

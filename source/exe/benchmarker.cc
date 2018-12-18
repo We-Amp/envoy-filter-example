@@ -18,7 +18,9 @@
 #include "envoy/network/transport_socket.h"
 #include "common/stats/isolated_store_impl.h"
 
-namespace Benchmark {
+using namespace Envoy;
+
+namespace Nighthawk {
 
 const auto timer_resolution = std::chrono::milliseconds(1);
 
@@ -82,10 +84,10 @@ Benchmarker::Benchmarker(Envoy::Event::Dispatcher& dispatcher, unsigned int conn
   }
 }
 
-Benchmarking::Http::CodecClientProd*
+Nighthawk::Http::CodecClientProd*
 Benchmarker::setupCodecClients(unsigned int number_of_clients) {
   int amount = number_of_clients - connected_clients_;
-  Benchmarking::Http::CodecClientProd* client = nullptr;
+  Nighthawk::Http::CodecClientProd* client = nullptr;
 
   while (amount-- > 0) {
     Network::ClientConnectionPtr connection;
@@ -112,8 +114,8 @@ Benchmarker::setupCodecClients(unsigned int number_of_clients) {
     };
 
     // TODO(oschaaf): implement h/2.
-    auto client = new Benchmarking::Http::CodecClientProd(
-        Benchmarking::Http::CodecClient::Type::HTTP1, std::move(connection), *dispatcher_);
+    auto client = new Nighthawk::Http::CodecClientProd(
+        Nighthawk::Http::CodecClient::Type::HTTP1, std::move(connection), *dispatcher_);
     connected_clients_++;
     client->setOnConnect([this, client]() {
       codec_clients_.push_back(client);
@@ -253,14 +255,14 @@ void Benchmarker::run(Network::DnsResolverSharedPtr dns_resolver) {
             (*(minmax.second) / 1000));
 }
 
-void Benchmarker::performRequest(Benchmarking::Http::CodecClientProd* client,
+void Benchmarker::performRequest(Nighthawk::Http::CodecClientProd* client,
                                  std::function<void(std::chrono::nanoseconds)> cb) {
   ASSERT(client);
   ASSERT(!client->remoteClosed());
   auto start = std::chrono::steady_clock::now();
   // response self-destructs.
-  Benchmarking::BufferingStreamDecoder* response =
-      new Benchmarking::BufferingStreamDecoder([this, cb, start, client]() -> void {
+  Nighthawk::BufferingStreamDecoder* response =
+      new Nighthawk::BufferingStreamDecoder([this, cb, start, client]() -> void {
         auto dur = std::chrono::steady_clock::now() - start;
         codec_clients_.push_back(client);
         cb(dur);
@@ -269,13 +271,13 @@ void Benchmarker::performRequest(Benchmarking::Http::CodecClientProd* client,
   // TODO(oschaaf): its possible we can increase accuracy by
   // writing a precomputed request string directly to the socket
   // in one go.
-  Http::StreamEncoder& encoder = client->newStream(*response);
-  Http::HeaderMapImpl headers;
-  headers.insertMethod().value(Http::Headers::get().MethodValues.Get);
+  StreamEncoder& encoder = client->newStream(*response);
+  HeaderMapImpl headers;
+  headers.insertMethod().value(Headers::get().MethodValues.Get);
   headers.insertPath().value(std::string(path_));
   headers.insertHost().value(std::string(host_));
-  headers.insertScheme().value(Http::Headers::get().SchemeValues.Http);
+  headers.insertScheme().value(Headers::get().SchemeValues.Http);
   encoder.encodeHeaders(headers, true);
 }
 
-} // namespace Benchmark
+} // namespace Nighthawk

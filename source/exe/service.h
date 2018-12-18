@@ -41,7 +41,7 @@
 using namespace Envoy;
 using namespace Envoy::Server;
 
-namespace Benchmark {
+namespace Nighthawk {
 namespace Service {
 
 /**
@@ -112,7 +112,7 @@ public:
    * @return BootstrapVersion to indicate which version of the API was parsed.
    */
   static BootstrapVersion loadBootstrapConfig(envoy::config::bootstrap::v2::Bootstrap& bootstrap,
-                                              Benchmarking::OptionsImpl& options);
+                                              Nighthawk::OptionsImpl& options);
 };
 
 /**
@@ -121,7 +121,7 @@ public:
  */
 class RunHelper : Logger::Loggable<Logger::Id::main> {
 public:
-  RunHelper(Instance& instance, Benchmarking::OptionsImpl& options, Event::Dispatcher& dispatcher,
+  RunHelper(Instance& instance, Nighthawk::OptionsImpl& options, Event::Dispatcher& dispatcher,
             Upstream::ClusterManager& cm, AccessLog::AccessLogManager& access_log_manager,
             InitManagerImpl& init_manager, OverloadManager& overload_manager,
             std::function<void()> workers_start_cb);
@@ -140,7 +140,7 @@ public:
   /**
    * @throw EnvoyException if initialization fails.
    */
-  InstanceImpl(Benchmarking::OptionsImpl& options, Event::TimeSystem& time_system,
+  InstanceImpl(Nighthawk::OptionsImpl& options, Event::TimeSystem& time_system,
                Network::Address::InstanceConstSharedPtr local_address, TestHooks& hooks,
                HotRestart& restarter, Stats::StoreRoot& store,
                Thread::BasicLockable& access_log_lock, ComponentFactory& component_factory,
@@ -192,7 +192,7 @@ public:
 private:
   ProtobufTypes::MessagePtr dumpBootstrapConfig();
   void flushStats();
-  void initialize(Benchmarking::OptionsImpl& options,
+  void initialize(Nighthawk::OptionsImpl& options,
                   Network::Address::InstanceConstSharedPtr local_address,
                   ComponentFactory& component_factory);
   void loadServerFlags(const absl::optional<std::string>& flags_path);
@@ -202,7 +202,7 @@ private:
 
   bool shutdown_;
   // TODO(oschaaf): Options switched from using the interface.
-  Benchmarking::OptionsImpl& options_;
+  Nighthawk::OptionsImpl& options_;
   Event::TimeSystem& time_system_;
   HotRestart& restarter_;
   const time_t start_time_;
@@ -245,4 +245,4 @@ private:
 };
 
 } // namespace Service
-} // namespace Benchmark
+} // namespace Nighthawk

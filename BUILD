@@ -21,7 +21,8 @@ envoy_cc_binary(
     name = "benchmark_main",
     repository = "@envoy",
     stamped = True,
-    deps = ["//source/exe:benchmark_main_entry_lib"],
+    deps = ["//source/exe:benchmark_main_entry_lib",
+    ],
 )
 
 envoy_cc_library(

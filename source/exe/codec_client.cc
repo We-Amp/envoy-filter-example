@@ -17,7 +17,7 @@
 
 using namespace Envoy;
 
-namespace Benchmarking {
+namespace Nighthawk {
 
 void BufferingStreamDecoder::decodeHeaders(Envoy::Http::HeaderMapPtr&& headers, bool end_stream) {
   ASSERT(!complete_);
@@ -218,4 +218,4 @@ CodecClientProd::CodecClientProd(Type type, Network::ClientConnectionPtr&& conne
 }
 
 } // namespace Http
-} // namespace Benchmarking
+} // namespace Nighthawk

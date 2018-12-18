@@ -21,7 +21,7 @@
 
 using namespace Envoy;
 
-namespace Benchmark {
+namespace Nighthawk {
 
 class ProdComponentFactory : public Service::ComponentFactory {
 public:
@@ -35,7 +35,7 @@ class MainCommonBase {
 public:
   // Consumer must guarantee that all passed references are alive until this object is
   // destructed.
-  MainCommonBase(Benchmarking::OptionsImpl& options, Event::TimeSystem& time_system,
+  MainCommonBase(Nighthawk::OptionsImpl& options, Event::TimeSystem& time_system,
                  TestHooks& test_hooks, Service::ComponentFactory& component_factory,
                  std::unique_ptr<Runtime::RandomGenerator>&& random_generator,
                  Thread::ThreadFactory& thread_factory);
@@ -65,7 +65,7 @@ public:
                     const AdminRequestFn& handler);
 
 protected:
-  Benchmarking::OptionsImpl& options_;
+  Nighthawk::OptionsImpl& options_;
 
   Service::ComponentFactory& component_factory_;
   Thread::ThreadFactory& thread_factory_;
@@ -110,7 +110,7 @@ private:
   Envoy::TerminateHandler log_on_terminate;
 #endif
 
-  Benchmarking::OptionsImpl options_;
+  Nighthawk::OptionsImpl options_;
   Event::RealTimeSystem real_time_system_;
   DefaultTestHooks default_test_hooks_;
   ProdComponentFactory prod_component_factory_;
@@ -118,4 +118,4 @@ private:
   MainCommonBase base_;
 };
 
-} // namespace Benchmark
+} // namespace Nighthawk

@@ -47,10 +47,10 @@
 using namespace Envoy;
 using namespace Envoy::Server;
 
-namespace Benchmark {
+namespace Nighthawk {
 namespace Service {
 
-InstanceImpl::InstanceImpl(Benchmarking::OptionsImpl& options, Event::TimeSystem& time_system,
+InstanceImpl::InstanceImpl(Nighthawk::OptionsImpl& options, Event::TimeSystem& time_system,
                            Network::Address::InstanceConstSharedPtr local_address, TestHooks& hooks,
                            HotRestart& restarter, Stats::StoreRoot& store,
                            Thread::BasicLockable& access_log_lock,
@@ -178,7 +178,7 @@ bool InstanceImpl::healthCheckFailed() { return server_stats_->live_.value() == 
 
 InstanceUtil::BootstrapVersion
 InstanceUtil::loadBootstrapConfig(envoy::config::bootstrap::v2::Bootstrap& bootstrap,
-                                  Benchmarking::OptionsImpl& options) {
+                                  Nighthawk::OptionsImpl& options) {
   try {
     if (!options.configPath().empty()) {
       MessageUtil::loadFromFile(options.configPath(), bootstrap);
@@ -206,7 +206,7 @@ InstanceUtil::loadBootstrapConfig(envoy::config::bootstrap::v2::Bootstrap& boots
   return BootstrapVersion::V1;
 }
 
-void InstanceImpl::initialize(Benchmarking::OptionsImpl& options,
+void InstanceImpl::initialize(Nighthawk::OptionsImpl& options,
                               Network::Address::InstanceConstSharedPtr local_address,
                               ComponentFactory& component_factory) {
   ENVOY_LOG(debug, "initializing epoch {} (hot restart version={})", options.restartEpoch(),
@@ -397,7 +397,7 @@ void InstanceImpl::loadServerFlags(const absl::optional<std::string>& flags_path
 
 uint64_t InstanceImpl::numConnections() { return listener_manager_->numConnections(); }
 
-RunHelper::RunHelper(Instance& instance, Benchmarking::OptionsImpl& options,
+RunHelper::RunHelper(Instance& instance, Nighthawk::OptionsImpl& options,
                      Event::Dispatcher& dispatcher, Upstream::ClusterManager& cm,
                      AccessLog::AccessLogManager& access_log_manager, InitManagerImpl& init_manager,
                      OverloadManager& overload_manager, std::function<void()> workers_start_cb) {
@@ -467,7 +467,7 @@ void InstanceImpl::run() {
   // auto watchdog = guard_dog_->createWatchDog(Thread::currentThreadId());
   // watchdog->startWatchdog(*dispatcher_);
   Benchmarker benchmarker(*dispatcher_, options_.connections(), options_.requests_per_second(),
-                          options_.duration(), Http::Headers::get().MethodValues.Get,
+                          options_.duration(), Headers::get().MethodValues.Get,
                           options_.uri());
   benchmarker.run(dns_resolver_);
   ENVOY_LOG(debug, "main dispatch loop exited");
@@ -544,4 +544,4 @@ ProtobufTypes::MessagePtr InstanceImpl::dumpBootstrapConfig() {
 }
 
 } // namespace Service
-} // namespace Benchmark
+} // namespace Nighthawk

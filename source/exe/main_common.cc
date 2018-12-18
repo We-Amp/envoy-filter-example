@@ -31,7 +31,7 @@
 
 using namespace Envoy;
 
-namespace Benchmark {
+namespace Nighthawk {
 
 Server::DrainManagerPtr ProdComponentFactory::createDrainManager(Server::Instance& server) {
   // The global drain manager only triggers on listener modification, which effectively is
@@ -46,7 +46,7 @@ Runtime::LoaderPtr ProdComponentFactory::createRuntime(Server::Instance& server,
   return Server::InstanceUtil::createRuntime(server, config);
 }
 
-MainCommonBase::MainCommonBase(Benchmarking::OptionsImpl& options, Event::TimeSystem& time_system,
+MainCommonBase::MainCommonBase(Nighthawk::OptionsImpl& options, Event::TimeSystem& time_system,
                                TestHooks& test_hooks, Service::ComponentFactory& component_factory,
                                std::unique_ptr<Runtime::RandomGenerator>&& random_generator,
                                Thread::ThreadFactory& thread_factory)
@@ -160,4 +160,4 @@ std::string MainCommon::hotRestartVersion(uint64_t max_num_stats, uint64_t max_s
   return "disabled";
 }
 
-} // namespace Benchmark
+} // namespace Nighthawk

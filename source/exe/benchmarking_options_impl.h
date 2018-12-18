@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <string>
 
-#include "envoy/common/exception.h"
+#include "nighthawk/common/exception.h"
 //#include "envoy/server/options.h"
 #include "common/stats/stats_options_impl.h"
 #include "envoy/stats/stats_options.h"
@@ -14,9 +14,9 @@
 
 #include "spdlog/spdlog.h"
 
-namespace Benchmarking {
+namespace Nighthawk {
 
-typedef std::unique_ptr<benchmarking::CommandLineOptions> BenchmarkingCommandLineOptionsPtr;
+typedef std::unique_ptr<nighthawk::CommandLineOptions> NighthawkCommandLineOptionsPtr;
 
 // We derive from envoy's option implementation, in an attempt
 // to leverage envoy's option handling infra, which failed.
@@ -30,7 +30,7 @@ public:
   OptionsImpl(const std::string& service_cluster, const std::string& service_node,
               const std::string& service_zone, spdlog::level::level_enum log_level);
 
-  virtual BenchmarkingCommandLineOptionsPtr toBenchmarkingCommandLineOptions() const;
+  virtual NighthawkCommandLineOptionsPtr toBenchmarkingCommandLineOptions() const;
 
   uint64_t requests_per_second() { return requests_per_second_; }
   uint64_t connections() { return connections_; }
@@ -44,4 +44,20 @@ private:
   std::string uri_;
 };
 
-} // namespace Benchmarking
+
+class NoServingException : public NighthawkException {
+public:
+  NoServingException() : NighthawkException("NoServingException") {}
+};
+
+/**
+ * Thrown when an OptionsImpl was not constructed because the argv was invalid.
+ */
+class MalformedArgvException : public NighthawkException {
+public:
+  MalformedArgvException(const std::string& what) : NighthawkException(what) {}
+};
+
+
+
+} // namespace Nighthawk

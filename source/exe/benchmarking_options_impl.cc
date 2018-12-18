@@ -2,7 +2,7 @@
 
 #include "tclap/CmdLine.h"
 
-namespace Benchmarking {
+namespace Nighthawk {
 
 // TODO(oschaaf): We hide the real argc from the base class.
 OptionsImpl::OptionsImpl(int argc, const char* const* argv,
@@ -49,8 +49,8 @@ OptionsImpl::OptionsImpl(const std::string& service_cluster, const std::string& 
                          const std::string& service_zone, spdlog::level::level_enum log_level)
     : Envoy::OptionsImpl(service_cluster, service_node, service_zone, log_level) {}
 
-BenchmarkingCommandLineOptionsPtr OptionsImpl::toBenchmarkingCommandLineOptions() const {
-  auto options = std::make_unique<benchmarking::CommandLineOptions>();
+NighthawkCommandLineOptionsPtr OptionsImpl::toBenchmarkingCommandLineOptions() const {
+  auto options = std::make_unique<nighthawk::CommandLineOptions>();
   options->set_requests_per_second(requests_per_second_);
   options->set_connections(connections_);
   options->set_duration(duration_);
@@ -58,4 +58,4 @@ BenchmarkingCommandLineOptionsPtr OptionsImpl::toBenchmarkingCommandLineOptions(
   return options;
 }
 
-} // namespace Benchmarking
+} // namespace Nighthawk

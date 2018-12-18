@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package benchmarking;
+package nighthawk;
 
 import "google/protobuf/duration.proto";
 

@@ -11,7 +11,7 @@
 
 #include "exe/codec_client.h"
 
-namespace Benchmark {
+namespace Nighthawk {
 
 class Benchmarker : Envoy::Logger::Loggable<Envoy::Logger::Id::main> {
 public:
@@ -21,8 +21,8 @@ public:
 
 private:
   void pulse(bool from_timer);
-  Benchmarking::Http::CodecClientProd* setupCodecClients(unsigned int number_of_clients);
-  void performRequest(Benchmarking::Http::CodecClientProd* client,
+  Nighthawk::Http::CodecClientProd* setupCodecClients(unsigned int number_of_clients);
+  void performRequest(Nighthawk::Http::CodecClientProd* client,
                       std::function<void(std::chrono::nanoseconds)> cb);
 
   Envoy::Event::Dispatcher* dispatcher_;
@@ -36,7 +36,7 @@ private:
   std::string path_;
   std::chrono::steady_clock::time_point start_;
   unsigned int current_rps_;
-  std::deque<Benchmarking::Http::CodecClientProd*> codec_clients_;
+  std::deque<Nighthawk::Http::CodecClientProd*> codec_clients_;
   Event::TimerPtr timer_;
   int requests_;
   int callback_count_;
@@ -50,4 +50,4 @@ private:
   Network::TransportSocketFactoryPtr client_ssl_ctx_;
 };
 
-} // namespace Benchmark
+} // namespace Nighthawk

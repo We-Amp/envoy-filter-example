@@ -17,18 +17,18 @@ int main(int argc, char** argv) {
   // handling, such as running in a chroot jail.
   absl::InitializeSymbolizer(argv[0]);
 #endif
-  std::unique_ptr<Benchmark::MainCommon> main_common;
+  std::unique_ptr<Nighthawk::MainCommon> main_common;
 
   // Initialize the server's main context under a try/catch loop and simply return EXIT_FAILURE
   // as needed. Whatever code in the initialization path that fails is expected to log an error
   // message so the user can diagnose.
   try {
-    main_common = std::make_unique<Benchmark::MainCommon>(argc, argv);
-  } catch (const Envoy::NoServingException& e) {
+    main_common = std::make_unique<Nighthawk::MainCommon>(argc, argv);
+  } catch (const Nighthawk::NoServingException& e) {
     return EXIT_SUCCESS;
-  } catch (const Envoy::MalformedArgvException& e) {
+  } catch (const Nighthawk::MalformedArgvException& e) {
     return EXIT_FAILURE;
-  } catch (const Envoy::EnvoyException& e) {
+  } catch (const Nighthawk::NighthawkException& e) {
     return EXIT_FAILURE;
   }
   // Run the server listener loop outside try/catch blocks, so that unexpected exceptions

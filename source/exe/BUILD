@@ -42,18 +42,19 @@ envoy_cc_library(
         "codec_client.cc",
         "service.cc",
         "benchmarker.cc",
-	"benchmarking_options_impl.cc"
+	    "benchmarking_options_impl.cc"
     ],
     hdrs = [
         "main_common.h",
         "codec_client.h",
         "service.h",
         "benchmarker.h",
-	"benchmarking_options_impl.h"
+    	"benchmarking_options_impl.h"
     ],
     repository = "@envoy",
     deps = [
         ":benchmark_options_cc",
+        "//include/nighthawk/common:base_includes",
         "@envoy//source/exe:envoy_common_lib",
         "@envoy//source/common/api:os_sys_calls_lib",
         "@envoy//source/common/common:compiler_requirements_lib",

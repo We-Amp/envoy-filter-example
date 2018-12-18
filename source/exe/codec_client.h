@@ -19,7 +19,7 @@
 using namespace Envoy;
 using namespace Envoy::Http;
 
-namespace Benchmarking {
+namespace Nighthawk {
 
 /**
  * A buffering response decoder used for testing.
@@ -285,4 +285,4 @@ public:
 };
 
 } // namespace Http
-} // namespace Benchmarking
+} // namespace Nighthawk
