@@ -32,6 +32,11 @@
                 "kind": "test",
                 "isDefault": true
             }            
+        },
+        {
+            "label": "setup third party includes",
+            "type": "shell",
+            "command": "tools/symlink-ide-headers.sh",
         }
 
     ]

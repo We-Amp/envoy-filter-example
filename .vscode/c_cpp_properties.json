@@ -5,11 +5,8 @@
             "includePath": [
                 "/usr/include",
                 "/usr/local/include",
-                "/home/oschaaf/.cache/bazel/_bazel_oschaaf/89044868b715419473ecced8561a5d13/**",
+                "${workspaceFolder}/bazel_output_base/external/**",
                 "${workspaceFolder}/source",
-                "${workspaceFolder}/envoy/source",
-                "${workspaceFolder}/envoy/include",
-                "${workspaceFolder}/envoy/test",
                 "${workspaceFolder}/**"
             ],
             "defines": [],
@@ -21,7 +18,8 @@
                 "path": [
                     "/usr/include",
                     "/usr/local/include",
-                    "/home/oschaaf/.cache/bazel/_bazel_oschaaf/89044868b715419473ecced8561a5d13/**",
+                    "${workspaceFolder}/bazel_output_base/external/**",
+                    "${workspaceFolder}/source",
                     "${workspaceFolder}/**"
                     ],
                 "limitSymbolsToIncludedHeaders": true,

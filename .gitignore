@@ -7,3 +7,4 @@ bazel-*
 res.txt
 chart.html
 out.json
+bazel_output_base
