@@ -28,7 +28,7 @@ class Stats:
         self.stats[key].append(value)
 
     def source(self):
-        if "benchmark_main" in self.command:
+        if "nighthawk_client" in self.command:
             return Source.Benchmark
         return Source.Wrk2
 

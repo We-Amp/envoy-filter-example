@@ -6,7 +6,7 @@
             "type": "cppdbg",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceRoot}/bazel-bin/benchmark_main",
+            "program": "${workspaceRoot}/bazel-bin/nighthawk_client",
             "args": [
                 "--rps",
                 "5",
@@ -33,7 +33,7 @@
             "type": "cppdbg",
             "request": "launch",
             "preLaunchTask": "build-test",
-            "program": "${workspaceRoot}/bazel-bin/test/benchmark_test",
+            "program": "${workspaceRoot}/bazel-bin/test/nighthawk_test",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/",

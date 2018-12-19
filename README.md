@@ -4,11 +4,11 @@
 
 ```bash
 # build it
-bazel build //:benchmark_main
+bazel build //:nighthawk_client
 # test it
-bazel test //test:benchmark_test
+bazel test //test:nighthawk_test
 # run a benchmark
-bazel-bin/benchmark_main --rps 50 --duration 3 --connections 1 http://localhost:10000
+bazel-bin/nighthawk_client --rps 50 --duration 3 --connections 1 http://localhost:10000
 # show latency percentiles
  ./stats.py
 ```

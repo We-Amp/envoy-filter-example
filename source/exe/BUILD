@@ -23,7 +23,7 @@ api_proto_library_internal(
 )
 
 envoy_cc_library(
-    name = "benchmark_main_entry_lib",
+    name = "nighthawk_client_entry_lib",
     srcs = ["client_main_entry.cc"],
     hdrs = [],
     repository = "@envoy",
@@ -32,12 +32,12 @@ envoy_cc_library(
         "abseil_symbolize",
     ],
     deps = [
-        ":benchmark_main_common_lib",
+        ":nighthawk_client_common_lib",
     ],
 )
 
 envoy_cc_library(
-    name = "benchmark_main_common_lib",
+    name = "nighthawk_client_common_lib",
     srcs = [
         "client.cc",
         "codec_client.cc",

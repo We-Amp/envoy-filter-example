@@ -50,43 +50,43 @@ repeat=50
 # single cpu core, single connection & concurrency, increasing QPS
 qps=50
 runtest "taskset -c $cores wrk2 -t 1 -c $concurrency -d $duration --rate $qps -U $url" "wrk" $repeat
-runtest "taskset -c $cores bazel-bin/benchmark_main --rps $qps --duration $duration --connections $concurrency $url" "benchmark" $repeat
+runtest "taskset -c $cores bazel-bin/nighthawk_client --rps $qps --duration $duration --connections $concurrency $url" "benchmark" $repeat
 qps=250
 runtest "taskset -c $cores wrk2 -t 1 -c $concurrency -d $duration --rate $qps -U $url" "wrk" $repeat
-runtest "taskset -c $cores bazel-bin/benchmark_main --rps $qps --duration $duration --connections $concurrency $url" "benchmark" $repeat
+runtest "taskset -c $cores bazel-bin/nighthawk_client --rps $qps --duration $duration --connections $concurrency $url" "benchmark" $repeat
 qps=500
 runtest "taskset -c $cores wrk2 -t 1 -c $concurrency -d $duration --rate $qps -U $url" "wrk" $repeat
-runtest "taskset -c $cores bazel-bin/benchmark_main --rps $qps --duration $duration --connections $concurrency $url" "benchmark" $repeat
+runtest "taskset -c $cores bazel-bin/nighthawk_client --rps $qps --duration $duration --connections $concurrency $url" "benchmark" $repeat
 qps=2000
 runtest "taskset -c $cores wrk2 -t 1 -c $concurrency -d $duration --rate $qps -U $url" "wrk" $repeat
-runtest "taskset -c $cores bazel-bin/benchmark_main --rps $qps --duration $duration --connections $concurrency $url" "benchmark" $repeat
+runtest "taskset -c $cores bazel-bin/nighthawk_client --rps $qps --duration $duration --connections $concurrency $url" "benchmark" $repeat
 qps=6000
 runtest "taskset -c $cores wrk2 -t 1 -c $concurrency -d $duration --rate $qps -U $url" "wrk" $repeat
-runtest "taskset -c $cores bazel-bin/benchmark_main --rps $qps --duration $duration --connections $concurrency $url" "benchmark" $repeat
+runtest "taskset -c $cores bazel-bin/nighthawk_client --rps $qps --duration $duration --connections $concurrency $url" "benchmark" $repeat
 qps=12000
 runtest "taskset -c $cores wrk2 -t 1 -c $concurrency -d $duration --rate $qps -U $url" "wrk" $repeat
-runtest "taskset -c $cores bazel-bin/benchmark_main --rps $qps --duration $duration --connections $concurrency $url" "benchmark" $repeat
+runtest "taskset -c $cores bazel-bin/nighthawk_client --rps $qps --duration $duration --connections $concurrency $url" "benchmark" $repeat
 
 concurrency="100"
 # single cpu core, single connection & concurrency, increasing QPS
 qps=50
 runtest "taskset -c $cores wrk2 -t 1 -c $concurrency -d $duration --rate $qps -U $url" "wrk" $repeat
-runtest "taskset -c $cores bazel-bin/benchmark_main --rps $qps --duration $duration --connections $concurrency $url" "benchmark" $repeat
+runtest "taskset -c $cores bazel-bin/nighthawk_client --rps $qps --duration $duration --connections $concurrency $url" "benchmark" $repeat
 qps=250
 runtest "taskset -c $cores wrk2 -t 1 -c $concurrency -d $duration --rate $qps -U $url" "wrk" $repeat
-runtest "taskset -c $cores bazel-bin/benchmark_main --rps $qps --duration $duration --connections $concurrency $url" "benchmark" $repeat
+runtest "taskset -c $cores bazel-bin/nighthawk_client --rps $qps --duration $duration --connections $concurrency $url" "benchmark" $repeat
 qps=500
 runtest "taskset -c $cores wrk2 -t 1 -c $concurrency -d $duration --rate $qps -U $url" "wrk" $repeat
-runtest "taskset -c $cores bazel-bin/benchmark_main --rps $qps --duration $duration --connections $concurrency $url" "benchmark" $repeat
+runtest "taskset -c $cores bazel-bin/nighthawk_client --rps $qps --duration $duration --connections $concurrency $url" "benchmark" $repeat
 qps=2000
 runtest "taskset -c $cores wrk2 -t 1 -c $concurrency -d $duration --rate $qps -U $url" "wrk" $repeat
-runtest "taskset -c $cores bazel-bin/benchmark_main --rps $qps --duration $duration --connections $concurrency $url" "benchmark" $repeat
+runtest "taskset -c $cores bazel-bin/nighthawk_client --rps $qps --duration $duration --connections $concurrency $url" "benchmark" $repeat
 qps=6000
 runtest "taskset -c $cores wrk2 -t 1 -c $concurrency -d $duration --rate $qps -U $url" "wrk" $repeat
-runtest "taskset -c $cores bazel-bin/benchmark_main --rps $qps --duration $duration --connections $concurrency $url" "benchmark" $repeat
+runtest "taskset -c $cores bazel-bin/nighthawk_client --rps $qps --duration $duration --connections $concurrency $url" "benchmark" $repeat
 qps=12000
 runtest "taskset -c $cores wrk2 -t 1 -c $concurrency -d $duration --rate $qps -U $url" "wrk" $repeat
-runtest "taskset -c $cores bazel-bin/benchmark_main --rps $qps --duration $duration --connections $concurrency $url" "benchmark" $repeat
+runtest "taskset -c $cores bazel-bin/nighthawk_client --rps $qps --duration $duration --connections $concurrency $url" "benchmark" $repeat
 
 
 echo "all tests done"
