@@ -201,8 +201,7 @@ private:
   void terminate();
 
   bool shutdown_;
-  // TODO(oschaaf): Options switched from using the interface.
-  Nighthawk::OptionsImpl& options_;
+  Nighthawk::Options& options_;
   Event::TimeSystem& time_system_;
   HotRestart& restarter_;
   const time_t start_time_;

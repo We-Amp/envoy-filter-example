@@ -5,12 +5,13 @@
 #include <string>
 
 #include "nighthawk/common/exception.h"
+#include "nighthawk/common/options.h"
 //#include "envoy/server/options.h"
 #include "common/stats/stats_options_impl.h"
 #include "envoy/stats/stats_options.h"
-#include "server/options_impl.h"
+//#include "server/options_impl.h"
 
-#include "source/exe/benchmark_options.pb.h"
+#include "source/exe/nighthawk_options.pb.h"
 
 #include "spdlog/spdlog.h"
 
@@ -20,22 +21,16 @@ typedef std::unique_ptr<nighthawk::CommandLineOptions> NighthawkCommandLineOptio
 
 // We derive from envoy's option implementation, in an attempt
 // to leverage envoy's option handling infra, which failed.
-class OptionsImpl : public Envoy::OptionsImpl {
+class OptionsImpl : public Nighthawk::Options {
 public:
-  OptionsImpl(int argc, const char* const* argv,
-              const Envoy::OptionsImpl::HotRestartVersionCb& hot_restart_version_cb,
-              spdlog::level::level_enum default_log_level);
+  OptionsImpl(int argc, const char* const* argv);
 
-  // Test constructor; creates "reasonable" defaults, but desired values should be set explicitly.
-  OptionsImpl(const std::string& service_cluster, const std::string& service_node,
-              const std::string& service_zone, spdlog::level::level_enum log_level);
+  virtual CommandLineOptionsPtr toCommandLineOptions() const override;
 
-  virtual NighthawkCommandLineOptionsPtr toBenchmarkingCommandLineOptions() const;
-
-  uint64_t requests_per_second() { return requests_per_second_; }
-  uint64_t connections() { return connections_; }
-  std::chrono::seconds duration() { return std::chrono::seconds(duration_); }
-  std::string uri() { return uri_; }
+  uint64_t requests_per_second() const override { return requests_per_second_; }
+  uint64_t connections() const override { return connections_; }
+  std::chrono::seconds duration() const override { return std::chrono::seconds(duration_); }
+  std::string uri() const override { return uri_; }
 
 private:
   uint64_t requests_per_second_;
@@ -43,7 +38,6 @@ private:
   uint64_t duration_;
   std::string uri_;
 };
-
 
 class NoServingException : public NighthawkException {
 public:
@@ -57,7 +51,5 @@ class MalformedArgvException : public NighthawkException {
 public:
   MalformedArgvException(const std::string& what) : NighthawkException(what) {}
 };
-
-
 
 } // namespace Nighthawk

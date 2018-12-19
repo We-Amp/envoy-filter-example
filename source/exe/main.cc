@@ -2,7 +2,7 @@
 
 #include "absl/debugging/symbolize.h"
 
-// NOLINT(namespace-envoy)
+// NOLINT(namespace-nighthawk)
 
 /**
  * Basic Site-Specific main()

@@ -17,7 +17,7 @@ envoy_package()
 
 api_proto_library_internal(
     name = "benchmark_options",
-    srcs = ["benchmark_options.proto"],
+    srcs = ["nighthawk_options.proto"],
     visibility = ["//visibility:public"],
 )
 
@@ -40,14 +40,14 @@ envoy_cc_library(
     srcs = [
         "main_common.cc",
         "codec_client.cc",
-        "service.cc",
+        #"service.cc",
         "benchmarker.cc",
 	    "benchmarking_options_impl.cc"
     ],
     hdrs = [
         "main_common.h",
         "codec_client.h",
-        "service.h",
+        #"service.h",
         "benchmarker.h",
     	"benchmarking_options_impl.h"
     ],

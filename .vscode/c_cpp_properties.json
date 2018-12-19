@@ -21,7 +21,7 @@
                     "${workspaceFolder}/bazel_output_base/external/**",
                     "${workspaceFolder}/source",
                     "${workspaceFolder}/**"
-                    ],
+                ],
                 "limitSymbolsToIncludedHeaders": true,
                 "databaseFilename": ""
             }

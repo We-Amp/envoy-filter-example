@@ -10,71 +10,41 @@
 
 //#include "server/options_impl.h
 #include "exe/benchmarking_options_impl.h"
-#include "exe/service.h"
-#include "server/server.h"
-#include "server/test_hooks.h"
+//#include "exe/service.h"
+//#include "server/server.h"
+//#include "server/test_hooks.h"
 
+/*
 #ifdef ENVOY_HANDLE_SIGNALS
 #include "exe/signal_action.h"
 #include "exe/terminate_handler.h"
 #endif
+*/
 
 using namespace Envoy;
 
 namespace Nighthawk {
 
-class ProdComponentFactory : public Service::ComponentFactory {
-public:
-  // Server::DrainManagerFactory
-  Server::DrainManagerPtr createDrainManager(Server::Instance& server) override;
-  Runtime::LoaderPtr createRuntime(Server::Instance& server,
-                                   Server::Configuration::Initial& config) override;
-};
-
 class MainCommonBase {
 public:
   // Consumer must guarantee that all passed references are alive until this object is
   // destructed.
-  MainCommonBase(Nighthawk::OptionsImpl& options, Event::TimeSystem& time_system,
-                 TestHooks& test_hooks, Service::ComponentFactory& component_factory,
-                 std::unique_ptr<Runtime::RandomGenerator>&& random_generator,
+  MainCommonBase(OptionsImpl& options, Event::TimeSystem& time_system,
                  Thread::ThreadFactory& thread_factory);
   ~MainCommonBase();
 
   bool run();
 
-  // Will be null if options.mode() == Server::Mode::Validate
-  Server::Instance* server() { return service_.get(); }
-
-  using AdminRequestFn =
-      std::function<void(const Http::HeaderMap& response_headers, absl::string_view body)>;
-
-  // Makes an admin-console request by path, calling handler() when complete.
-  // The caller can initiate this from any thread, but it posts the request
-  // onto the main thread, so the handler is called asynchronously.
-  //
-  // This is designed to be called from downstream consoles, so they can access
-  // the admin console information stream without opening up a network port.
-  //
-  // This should only be called while run() is active; ensuring this is the
-  // responsibility of the caller.
-  //
-  // TODO(jmarantz): consider std::future for encapsulating this delayed request
-  // semantics, rather than a handler callback.
-  void adminRequest(absl::string_view path_and_query, absl::string_view method,
-                    const AdminRequestFn& handler);
-
 protected:
   Nighthawk::OptionsImpl& options_;
 
-  Service::ComponentFactory& component_factory_;
   Thread::ThreadFactory& thread_factory_;
 
   std::unique_ptr<ThreadLocal::InstanceImpl> tls_;
-  std::unique_ptr<Server::HotRestart> restarter_;
   std::unique_ptr<Stats::ThreadLocalStoreImpl> stats_store_;
   std::unique_ptr<Logger::Context> logging_context_;
-  std::unique_ptr<Service::InstanceImpl> service_;
+  // std::unique_ptr<Service::InstanceImpl> service_;
+  Event::TimeSystem& time_system_;
 
 private:
   void configureComponentLogLevels();
@@ -87,33 +57,16 @@ public:
   MainCommon(int argc, const char* const* argv);
   bool run() { return base_.run(); }
 
-  // Makes an admin-console request by path, calling handler() when complete.
-  // The caller can initiate this from any thread, but it posts the request
-  // onto the main thread, so the handler is called asynchronously.
-  //
-  // This is designed to be called from downstream consoles, so they can access
-  // the admin console information stream without opening up a network port.
-  //
-  // This should only be called while run() is active; ensuring this is the
-  // responsibility of the caller.
-  void adminRequest(absl::string_view path_and_query, absl::string_view method,
-                    const MainCommonBase::AdminRequestFn& handler) {
-    base_.adminRequest(path_and_query, method, handler);
-  }
-
-  static std::string hotRestartVersion(uint64_t max_num_stats, uint64_t max_stat_name_len,
-                                       bool hot_restart_enabled);
-
 private:
-#ifdef ENVOY_HANDLE_SIGNALS
-  Envoy::SignalAction handle_sigs;
-  Envoy::TerminateHandler log_on_terminate;
-#endif
-
-  Nighthawk::OptionsImpl options_;
+  /*
+  #ifdef ENVOY_HANDLE_SIGNALS
+    Envoy::SignalAction handle_sigs;
+    Envoy::TerminateHandler log_on_terminate;
+  #endif
+  */
+  OptionsImpl options_;
   Event::RealTimeSystem real_time_system_;
-  DefaultTestHooks default_test_hooks_;
-  ProdComponentFactory prod_component_factory_;
+  // DefaultTestHooks default_test_hooks_;
   Thread::ThreadFactoryImpl thread_factory_;
   MainCommonBase base_;
 };

@@ -18,8 +18,8 @@
 #include "envoy/event/signal.h"
 #include "envoy/event/timer.h"
 #include "envoy/network/dns.h"
-#include "envoy/server/options.h"
 #include "envoy/upstream/cluster_manager.h"
+#include "nighthawk/common/options.h"
 
 #include "common/api/api_impl.h"
 #include "common/api/os_sys_calls_impl.h"
@@ -467,8 +467,7 @@ void InstanceImpl::run() {
   // auto watchdog = guard_dog_->createWatchDog(Thread::currentThreadId());
   // watchdog->startWatchdog(*dispatcher_);
   Benchmarker benchmarker(*dispatcher_, options_.connections(), options_.requests_per_second(),
-                          options_.duration(), Headers::get().MethodValues.Get,
-                          options_.uri());
+                          options_.duration(), Headers::get().MethodValues.Get, options_.uri());
   benchmarker.run(dns_resolver_);
   ENVOY_LOG(debug, "main dispatch loop exited");
   // guard_dog_->stopWatching(watchdog);
