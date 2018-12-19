@@ -5,11 +5,11 @@
 #include <string>
 
 #include "envoy/common/pure.h"
-#include "source/exe/nighthawk_options.pb.h"
+#include "source/exe/client_options.pb.h"
 
 namespace Nighthawk {
 
-typedef std::unique_ptr<nighthawk::CommandLineOptions> CommandLineOptionsPtr;
+typedef std::unique_ptr<nighthawk::ClientCommandLineOptions> ClientCommandLineOptionsPtr;
 
 class Options {
 public:
@@ -20,7 +20,7 @@ public:
   virtual std::chrono::seconds duration() const PURE;
   virtual std::string uri() const PURE;
 
-  virtual CommandLineOptionsPtr toCommandLineOptions() const PURE;
+  virtual ClientCommandLineOptionsPtr toClientCommandLineOptions() const PURE;
 };
 
 } // namespace Nighthawk

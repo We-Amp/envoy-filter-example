@@ -2,7 +2,7 @@
 
 ## Building and running the benchmark
 
-```
+```bash
 # build it
 bazel build opt //:benchmark_main
 # run the benchmark

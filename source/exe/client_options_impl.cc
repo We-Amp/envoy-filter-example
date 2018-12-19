@@ -1,4 +1,4 @@
-#include "exe/benchmarking_options_impl.h"
+#include "exe/client_options_impl.h"
 
 #include "tclap/CmdLine.h"
 
@@ -6,9 +6,8 @@ namespace Nighthawk {
 
 OptionsImpl::OptionsImpl(int argc, const char* const* argv) {
   TCLAP::CmdLine cmd("benchmarking", ' ', "PoC");
-  // we need to rebuild the command line parsing ourselves here.
   TCLAP::ValueArg<uint64_t> requests_per_second("", "rps", "target requests per second", false,
-                                                500 /*default qps*/, "uint64_t", cmd);
+                                                5 /*default qps*/, "uint64_t", cmd);
   TCLAP::ValueArg<uint64_t> connections("", "connections", "number of connections to use", false, 1,
                                         "uint64_t", cmd);
   TCLAP::ValueArg<uint64_t> duration("", "duration", "duration (seconds)", false, 5, "uint64_t",
@@ -18,8 +17,6 @@ OptionsImpl::OptionsImpl(int argc, const char* const* argv) {
   cmd.setExceptionHandling(false);
   try {
     cmd.parse(argc, argv);
-    // TODO(oschaaf): can't access count_
-    cmd.getArgList().size();
   } catch (TCLAP::ArgException& e) {
     try {
       cmd.getOutput()->failure(cmd, e);
@@ -40,12 +37,12 @@ OptionsImpl::OptionsImpl(int argc, const char* const* argv) {
   uri_ = uri.getValue();
 }
 
-Nighthawk::CommandLineOptionsPtr OptionsImpl::toCommandLineOptions() const {
-  Nighthawk::CommandLineOptionsPtr command_line_options =
-      std::make_unique<nighthawk::CommandLineOptions>();
+Nighthawk::ClientCommandLineOptionsPtr OptionsImpl::toClientCommandLineOptions() const {
+  Nighthawk::ClientCommandLineOptionsPtr command_line_options =
+      std::make_unique<nighthawk::ClientCommandLineOptions>();
 
   command_line_options->set_connections(connections());
-  command_line_options->set_duration(duration().count());
+  command_line_options->mutable_duration()->set_seconds(duration().count());
   command_line_options->set_requests_per_second(requests_per_second());
   command_line_options->set_uri(uri());
 

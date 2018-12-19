@@ -22,7 +22,7 @@ using namespace Envoy::Http;
 namespace Nighthawk {
 
 /**
- * A buffering response decoder used for testing.
+ * A self destructing response decoder that discards the response body.
  */
 class BufferingStreamDecoder : public StreamDecoder, public StreamCallbacks {
 public:
@@ -144,8 +144,6 @@ public:
   Type type() const { return type_; }
   void setOnConnect(std::function<void()> cb) { cb_onConnect_ = cb; }
   void setOnClose(std::function<void()> cb) { cb_onClose_ = cb; }
-  void cork();
-  void unCork();
 
 protected:
   /**

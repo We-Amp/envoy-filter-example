@@ -13,10 +13,10 @@
 #include "common/network/utility.h"
 #include "envoy/network/dns.h"
 
-#include "server/transport_socket_config_impl.h"
 #include "common/ssl/ssl_socket.h"
-#include "envoy/network/transport_socket.h"
 #include "common/stats/isolated_store_impl.h"
+#include "envoy/network/transport_socket.h"
+#include "server/transport_socket_config_impl.h"
 
 using namespace Envoy;
 
@@ -84,8 +84,7 @@ Benchmarker::Benchmarker(Envoy::Event::Dispatcher& dispatcher, unsigned int conn
   }
 }
 
-Nighthawk::Http::CodecClientProd*
-Benchmarker::setupCodecClients(unsigned int number_of_clients) {
+Nighthawk::Http::CodecClientProd* Benchmarker::setupCodecClients(unsigned int number_of_clients) {
   int amount = number_of_clients - connected_clients_;
   Nighthawk::Http::CodecClientProd* client = nullptr;
 
@@ -114,8 +113,8 @@ Benchmarker::setupCodecClients(unsigned int number_of_clients) {
     };
 
     // TODO(oschaaf): implement h/2.
-    auto client = new Nighthawk::Http::CodecClientProd(
-        Nighthawk::Http::CodecClient::Type::HTTP1, std::move(connection), *dispatcher_);
+    auto client = new Nighthawk::Http::CodecClientProd(Nighthawk::Http::CodecClient::Type::HTTP1,
+                                                       std::move(connection), *dispatcher_);
     connected_clients_++;
     client->setOnConnect([this, client]() {
       codec_clients_.push_back(client);
@@ -171,7 +170,7 @@ void Benchmarker::pulse(bool from_timer) {
   //   (but those shouldn't influence measurements.)
   // TODO(oschaaf): this will not alway work well:
   //    E.g: when there are long delays between us writing a request
-  //    and receiving the corresponding notifications of the response stream.
+  //    and receiving the corresponding notifications of the stream_decoder stream.
   // TODO(oschaaf): discuss: we may want to experiment with driving
   // the loop from another thread, e.g. by listening to a file descriptor here
   // and writing single bytes to it from the other thread at a high frequency.
@@ -260,18 +259,17 @@ void Benchmarker::performRequest(Nighthawk::Http::CodecClientProd* client,
   ASSERT(client);
   ASSERT(!client->remoteClosed());
   auto start = std::chrono::steady_clock::now();
-  // response self-destructs.
-  Nighthawk::BufferingStreamDecoder* response =
-      new Nighthawk::BufferingStreamDecoder([this, cb, start, client]() -> void {
-        auto dur = std::chrono::steady_clock::now() - start;
-        codec_clients_.push_back(client);
-        cb(dur);
-      });
+  // stream_decoder self-destructs.
+  auto stream_decoder = new Nighthawk::BufferingStreamDecoder([this, cb, start, client]() -> void {
+    auto dur = std::chrono::steady_clock::now() - start;
+    codec_clients_.push_back(client);
+    cb(dur);
+  });
 
   // TODO(oschaaf): its possible we can increase accuracy by
   // writing a precomputed request string directly to the socket
   // in one go.
-  StreamEncoder& encoder = client->newStream(*response);
+  StreamEncoder& encoder = client->newStream(*stream_decoder);
   HeaderMapImpl headers;
   headers.insertMethod().value(Headers::get().MethodValues.Get);
   headers.insertPath().value(std::string(path_));

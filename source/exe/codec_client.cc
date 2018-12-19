@@ -28,11 +28,9 @@ void BufferingStreamDecoder::decodeHeaders(Envoy::Http::HeaderMapPtr&& headers, 
   }
 }
 
-void BufferingStreamDecoder::decodeData(Buffer::Instance& data, bool end_stream) {
+void BufferingStreamDecoder::decodeData(Buffer::Instance&, bool end_stream) {
   ASSERT(!complete_);
   complete_ = end_stream;
-  (void)&data;
-  // body_.append(data.toString());
   if (complete_) {
     onComplete();
   }
@@ -44,15 +42,12 @@ void BufferingStreamDecoder::decodeTrailers(Envoy::Http::HeaderMapPtr&&) {
 
 void BufferingStreamDecoder::onComplete() {
   ASSERT(complete_);
-  // std::cout << "********  body: " << body_ << "\n";
   on_complete_cb_();
-  // TODO(oschaaf): assess
   delete this;
 }
 
 void BufferingStreamDecoder::onResetStream(Envoy::Http::StreamResetReason) {
-  std::cout << "********  reset stream\n";
-  // TODO(oschaaf):
+  // TODO(oschaaf): handle stream resets.
   // ADD_FAILURE();
   delete this;
 }
@@ -78,23 +73,7 @@ CodecClient::CodecClient(Type type, Network::ClientConnectionPtr&& connection,
     enableIdleTimer();
   }
 
-  // We just universally set no delay on connections. Theoretically we might at some point want
-  // to make this configurable.
   connection_->noDelay(true);
-  // int one = 1;
-  // setsockopt((dynamic_cast<Envoy::Network::ConnectionImpl*>(connection_.get()))->fd(), SOL_TCP,
-  // TCP_QUICKACK, &one, sizeof(one));
-}
-
-void CodecClient::cork() {
-  int one = 1;
-  setsockopt((dynamic_cast<Envoy::Network::ConnectionImpl*>(connection_.get()))->fd(), SOL_TCP,
-             TCP_CORK, &one, sizeof(one));
-}
-void CodecClient::unCork() {
-  int zero = 0;
-  setsockopt((dynamic_cast<Envoy::Network::ConnectionImpl*>(connection_.get()))->fd(), SOL_TCP,
-             TCP_CORK, &zero, sizeof(zero));
 }
 
 CodecClient::~CodecClient() {}

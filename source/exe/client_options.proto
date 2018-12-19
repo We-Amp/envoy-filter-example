@@ -4,13 +4,13 @@ package nighthawk;
 
 import "google/protobuf/duration.proto";
 
-message CommandLineOptions {
+message ClientCommandLineOptions {
   // See :option:`--rps` for details.
   uint64 requests_per_second = 1;
   // See :option:`--connections` for details.
   uint64 connections = 2;
   // See :option:`--duration` for details.
-  uint64 duration = 3;
+  google.protobuf.Duration duration = 3;
 
   string uri = 4;
 }
