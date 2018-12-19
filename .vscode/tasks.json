@@ -56,31 +56,30 @@
                     "TEST_WORKSPACE": ".",
                     "TEST_SRCDIR": "${workspaceRoot}",
                     "ENVOY_IP_TEST_VERSIONS": "v4only"
-                ]
+                }
+            },
+            "command": "bazel-bin/test/nighthawk_test",
+            "group": {
+                "kind": "test",
+                "isDefault": true
             }
         },
-        "command": "bazel-bin/test/nighthawk_test",
-        "group": {
-            "kind": "test",
-            "isDefault": true
+        {
+            "label": "simple-valgrind-run",
+            "type": "shell",
+            "command": "valgrind --leak-check=full --suppressions=envoy/tools/valgrind-suppressions.txt bazel-bin/nighthawk_client --rps 2 127.0.0.1:10001",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "setup third party includes",
+            "type": "shell",
+            "command": "tools/symlink-ide-headers.sh",
         }
-    },
-    {
-        "label": "simple-valgrind-run",
-        "type": "shell",
-        "command": "valgrind --leak-check=full --suppressions=envoy/tools/valgrind-suppressions.txt bazel-bin/nighthawk_client --rps 2 127.0.0.1:10001",
-        "problemMatcher": [
-            "$gcc"
-        ],
-        "group": {
-            "kind": "test",
-            "isDefault": true
-        }
-    },
-    {
-        "label": "setup third party includes",
-        "type": "shell",
-        "command": "tools/symlink-ide-headers.sh",
-    }
-]
+    ]
 }
