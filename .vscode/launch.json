@@ -33,7 +33,7 @@
             "type": "cppdbg",
             "request": "launch",
             "preLaunchTask": "build-test",
-            "program": "${workspaceRoot}/bazel-bin/benchmark_test",
+            "program": "${workspaceRoot}/bazel-bin/test/benchmark_test",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/",

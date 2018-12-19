@@ -54,16 +54,7 @@ envoy_cc_library(
     deps = [
         ":benchmark_options_cc",
         "//include/nighthawk/common:base_includes",
-        "@envoy//source/exe:envoy_common_lib",
-        "@envoy//source/common/api:os_sys_calls_lib",
-        "@envoy//source/common/common:compiler_requirements_lib",
-        "@envoy//source/common/common:perf_annotation_lib",
+        "@envoy//source/exe:envoy_common_lib", 
+        "@envoy//source/common/common:compiler_requirements_lib"
     ]
-    + select({
-        "@envoy//bazel:disable_signal_trace": [],
-        "//conditions:default": [
-            "@envoy//source/exe:sigaction_lib",
-            "@envoy//source/exe:terminate_handler_lib",
-        ],
-    }),
 )

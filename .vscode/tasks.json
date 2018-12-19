@@ -18,7 +18,7 @@
         {
             "label": "build-test",
             "type": "shell",
-            "command": "PATH=/usr/lib/llvm-7/bin:$PATH CC=clang CXX=clang++ bazel build --remote_http_cache=http://192.168.2.232:10001/cache/ --experimental_strict_action_env -c dbg //:benchmark_test",
+            "command": "PATH=/usr/lib/llvm-7/bin:$PATH CC=clang CXX=clang++ bazel build --remote_http_cache=http://192.168.2.232:10001/cache/ --experimental_strict_action_env -c dbg //test:benchmark_test",
             "problemMatcher": [
                 "$gcc"
             ],
@@ -28,9 +28,9 @@
             }
         },
         {
-            "label": "run-test",
+            "label": "bazel-run-test",
             "type": "shell",
-            "command": "PATH=/usr/lib/llvm-7/bin:$PATH CC=clang CXX=clang++ bazel test --cache_test_results=no --remote_http_cache=http://192.168.2.232:10001/cache/ --experimental_strict_action_env -c dbg //:benchmark_test",
+            "command": "PATH=/usr/lib/llvm-7/bin:$PATH CC=clang CXX=clang++ bazel test  --cache_test_results=no --remote_http_cache=http://192.168.2.232:10001/cache/ --experimental_strict_action_env -c dbg //test:benchmark_test",
             "problemMatcher": [
                 "$gcc"
             ],
@@ -40,21 +40,47 @@
             }
         },
         {
-            "label": "simple-vagrind-run",
+            "label": "direct-run-test",
             "type": "shell",
-            "command": "valgrind --leak-check=full --suppressions=envoy/tools/valgrind-suppressions.txt bazel-bin/benchmark_main --rps 2 127.0.0.1:10001",
-            "problemMatcher": [
-                "$gcc"
-            ],
-            "group": {
-                "kind": "test",
-                "isDefault": true
+            "dependsOn": "build-test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "options": {
+                "env": {
+                    "TEST_WORKSPACE": ".",
+                    "TEST_SRCDIR": "${workspaceRoot}",
+                    "ENVOY_IP_TEST_VERSIONS": "v4only"
+                ]
             }
         },
-        {
-            "label": "setup third party includes",
-            "type": "shell",
-            "command": "tools/symlink-ide-headers.sh",
+        "command": "bazel-bin/test/benchmark_test",
+        "group": {
+            "kind": "test",
+            "isDefault": true
         }
-    ]
+    },
+    {
+        "label": "simple-valgrind-run",
+        "type": "shell",
+        "command": "valgrind --leak-check=full --suppressions=envoy/tools/valgrind-suppressions.txt bazel-bin/benchmark_main --rps 2 127.0.0.1:10001",
+        "problemMatcher": [
+            "$gcc"
+        ],
+        "group": {
+            "kind": "test",
+            "isDefault": true
+        }
+    },
+    {
+        "label": "setup third party includes",
+        "type": "shell",
+        "command": "tools/symlink-ide-headers.sh",
+    }
+]
 }

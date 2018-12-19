@@ -1,0 +1,18 @@
+package(default_visibility = ["//visibility:public"])
+
+load(
+    "@envoy//bazel:envoy_build_system.bzl",
+    "envoy_cc_binary",
+    "envoy_cc_library",
+    "envoy_cc_test",
+)
+
+envoy_cc_test(
+    name = "benchmark_test",
+    srcs = ["client_options_test.cc"],
+    repository = "@envoy",
+    deps = [
+        "@envoy//test/integration:integration_lib"
+    ],
+)
+
