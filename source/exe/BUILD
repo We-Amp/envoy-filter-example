@@ -54,6 +54,7 @@ envoy_cc_library(
     deps = [
         ":benchmark_options_cc",
         "//include/nighthawk/common:base_includes",
+        "//include/nighthawk/client:client_includes",
         "@envoy//source/exe:envoy_common_lib", 
         "@envoy//source/common/common:compiler_requirements_lib"
     ]

@@ -4,9 +4,7 @@
 #include <cstdint>
 #include <string>
 
-#include "common/stats/stats_options_impl.h"
-#include "envoy/stats/stats_options.h"
-#include "nighthawk/common/client_options.h"
+#include "nighthawk/client/client_options.h"
 #include "nighthawk/common/exception.h"
 
 #include "source/exe/client_options.pb.h"
