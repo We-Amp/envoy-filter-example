@@ -11,7 +11,6 @@ enum TimingProfile { Linear = 1 };
 
 class BenchmarkTarget {
 public:
-  BenchmarkTarget(int a) PURE;
   virtual ~BenchmarkTarget() {}
 };
 
