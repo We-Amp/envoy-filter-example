@@ -1,5 +1,6 @@
 #include "exe/client.h"
 
+#include <chrono>
 #include <iostream>
 #include <memory>
 
@@ -7,7 +8,9 @@
 
 #include "absl/strings/str_split.h"
 
+#include "common/api/api_impl.h"
 #include "common/common/compiler_requirements.h"
+#include "common/common/thread_impl.h"
 #include "common/event/dispatcher_impl.h"
 #include "common/http/headers.h"
 #include "common/network/raw_buffer_socket.h"
@@ -40,7 +43,12 @@ void ClientMain::configureComponentLogLevels() {
 }
 
 bool ClientMain::run() {
-  auto dispatcher = Event::DispatcherPtr{new Event::DispatcherImpl(real_time_system_)};
+  Stats::IsolatedStoreImpl stats;
+  Thread::ThreadFactoryImplPosix thread_factory;
+  auto api = new Envoy::Api::Impl(std::chrono::milliseconds(100) /*flush interval*/, thread_factory,
+                                  stats);
+  auto dispatcher = api->allocateDispatcher(real_time_system_);
+  // dispatcher = Event::DispatcherPtr{new Event::DispatcherImpl(real_time_system_)};
   Benchmarker benchmarker(*dispatcher, options_.connections(), options_.requests_per_second(),
                           options_.duration(), Headers::get().MethodValues.Get, options_.uri());
   auto dns_resolver = dispatcher->createDnsResolver({});
