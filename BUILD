@@ -6,9 +6,9 @@ load(
 )
 
 envoy_cc_binary(
-    name = "benchmark_main",
+    name = "nighthawk_client",
     repository = "@envoy",
     stamped = True,
-    deps = ["//source/exe:benchmark_main_entry_lib",
+    deps = ["//source/exe:nighthawk_client_entry_lib",
     ],
 )

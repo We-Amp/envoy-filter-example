@@ -10,10 +10,11 @@ load(
 envoy_package()
 
 envoy_basic_cc_library(
-    name = "base_includes",
+    name = "client_includes",
     hdrs = [
-        "exception.h",
+        "driver.h",
+        "client_options.h",
     ],
-    include_prefix = "nighthawk/common",
+    include_prefix = "nighthawk/client",
 )
 

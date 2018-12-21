@@ -8,11 +8,11 @@ load(
 )
 
 envoy_cc_test(
-    name = "benchmark_test",
+    name = "nighthawk_test",
     srcs = ["client_options_test.cc"],
     repository = "@envoy",
     deps = [
-        "@envoy//test/integration:integration_lib"
+        #"@envoy//test/integration:integration_lib"
     ],
 )
 

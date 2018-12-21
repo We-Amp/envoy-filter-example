@@ -2,14 +2,14 @@
 
 namespace Nighthawk {
 
-class ClientOptionsTest {
+class ClientOptionsTest : public testing::Test {
 
 public:
   ClientOptionsTest() {}
-  void SetUp();
-  void TearDown();
+  void SetUp() {}
+  void TearDown() {}
 };
 
-TEST(ClientOptionsTest, TestTest) { EXPECT_EQ("hello", "hello"); }
+TEST_F(ClientOptionsTest, TestTest) { EXPECT_EQ("hello", "hello"); }
 
 } // namespace Nighthawk
