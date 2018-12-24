@@ -31,7 +31,7 @@ Benchmarker::Benchmarker(Envoy::Event::Dispatcher& dispatcher, unsigned int conn
       method_(method), is_https_(false), host_(""), path_(""), current_rps_(0), requests_(0),
       callback_count_(0), connected_clients_(0), warming_up_(true),
       max_requests_(rps * duration.count()), dns_failure_(true) {
-  // preallocate anticipaged space needed for results.
+  // preallocate anticipated space needed for results.
   results_.reserve(duration.count() * rps);
 
   // parse incoming uri into fields that we need.

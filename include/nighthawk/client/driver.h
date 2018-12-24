@@ -7,13 +7,6 @@
 
 namespace Nighthawk {
 
-enum TimingProfile { Linear = 1 };
-
-class BenchmarkTarget {
-public:
-  virtual ~BenchmarkTarget() {}
-};
-
 class Driver {
 public:
   virtual ~Driver() {}
@@ -31,6 +24,14 @@ private:
     pooling.
     The object provides a method which returns true/false,where true means
     that it is time to initate a new connections.
+
+
+  auto h = HttpClient();
+  auto l  = WrapLatencyMeasurements();
+
+  Sequencer.setInterval(h.beginRequest);
+
+
 
   */
   // std::function<void()> method_;

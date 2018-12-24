@@ -7,6 +7,7 @@
                 "/usr/local/include",
                 "${workspaceFolder}/bazel_output_base/external/**",
                 "${workspaceFolder}/source",
+                "${workspaceFolder}/include",
                 "${workspaceFolder}/**"
             ],
             "defines": [],
@@ -20,6 +21,7 @@
                     "/usr/local/include",
                     "${workspaceFolder}/bazel_output_base/external/**",
                     "${workspaceFolder}/source",
+                    "${workspaceFolder}/include",
                     "${workspaceFolder}/**"
                 ],
                 "limitSymbolsToIncludedHeaders": true,
