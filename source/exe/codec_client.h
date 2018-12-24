@@ -6,7 +6,6 @@
 
 #include "envoy/event/deferred_deletable.h"
 #include "envoy/event/timer.h"
-#include "envoy/http/codec.h"
 #include "envoy/network/connection.h"
 #include "envoy/network/filter.h"
 //#include "envoy/upstream/upstream.h"
@@ -280,6 +279,24 @@ class CodecClientProd : public CodecClient {
 public:
   CodecClientProd(Type type, Network::ClientConnectionPtr&& connection,
                   Event::Dispatcher& dispatcher);
+};
+
+class HttpCodecClientPool {
+public:
+  HttpCodecClientPool(Envoy::Event::Dispatcher& dispatcher, Envoy::Http::Protocol protocol,
+                      Network::Address::InstanceConstSharedPtr target_address_,
+                      unsigned int pool_size);
+  ~HttpCodecClientPool();
+  bool tryStartRequest(const std::string host, const std::string path);
+
+private:
+  CodecClient* getCodecClient();
+  std::deque<Nighthawk::Http::CodecClient*> codec_clients_;
+  unsigned int connected_clients_;
+  Envoy::Event::Dispatcher* dispatcher_;
+  Envoy::Http::Protocol protocol_;
+  Network::Address::InstanceConstSharedPtr target_address_;
+  unsigned int pool_size_;
 };
 
 } // namespace Http

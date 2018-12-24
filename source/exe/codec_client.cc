@@ -15,6 +15,10 @@
 #include "common/http/http2/codec_impl.h"
 #include "common/http/utility.h"
 
+// TODO(oschaaf): check.
+#include "common/network/address_impl.h"
+#include "common/network/raw_buffer_socket.h"
+
 using namespace Envoy;
 
 namespace Nighthawk {
@@ -53,6 +57,70 @@ void BufferingStreamDecoder::onResetStream(Envoy::Http::StreamResetReason) {
 }
 
 namespace Http {
+
+HttpCodecClientPool::HttpCodecClientPool(Envoy::Event::Dispatcher& dispatcher,
+                                         Envoy::Http::Protocol protocol,
+                                         Network::Address::InstanceConstSharedPtr target_address,
+                                         unsigned int pool_size)
+    : dispatcher_(&dispatcher), protocol_(protocol), target_address_(target_address),
+      pool_size_(pool_size) {}
+
+HttpCodecClientPool::~HttpCodecClientPool() {}
+
+CodecClient* HttpCodecClientPool::getCodecClient() {
+  int amount = pool_size_ - connected_clients_;
+  CodecClient* client = nullptr;
+
+  while (amount-- > 0) {
+    Network::ClientConnectionPtr connection;
+    ASSERT(protocol_ == Envoy::Http::Protocol::Http11);
+    // TODO(oschaaf): https, h/2
+    connection = dispatcher_->createClientConnection(
+        target_address_, Network::Address::InstanceConstSharedPtr(),
+        std::make_unique<Network::RawBufferSocket>(), nullptr);
+    client = new CodecClientProd(CodecClient::Type::HTTP1, std::move(connection), *dispatcher_);
+    connected_clients_++;
+    client->setOnConnect([this, client]() {
+      codec_clients_.push_back(client);
+      // TODO(oschaaf): wake up benchmark loop here.
+    });
+    client->setOnClose([this, client]() {
+      codec_clients_.erase(std::remove(codec_clients_.begin(), codec_clients_.end(), client),
+                           codec_clients_.end());
+      connected_clients_--;
+    });
+    return nullptr;
+  }
+  if (codec_clients_.size() > 0) {
+    client = codec_clients_.front();
+    ASSERT(!client->remoteClosed());
+    codec_clients_.pop_front();
+  }
+
+  return client;
+}
+
+bool HttpCodecClientPool::tryStartRequest(const std::string host, const std::string path) {
+  auto client = getCodecClient();
+  if (client != nullptr) {
+
+    // TODO(oschaaf): measurement. wire up completion.
+    auto stream_decoder = new Nighthawk::BufferingStreamDecoder(
+        [this, client]() -> void { codec_clients_.push_back(client); });
+
+    // TODO(oschaaf): its possible we can increase accuracy by
+    // writing a precomputed request string directly to the socket
+    // in one go.
+    StreamEncoder& encoder = client->newStream(*stream_decoder);
+    HeaderMapImpl headers;
+    headers.insertMethod().value(Headers::get().MethodValues.Get);
+    headers.insertPath().value(std::string(path));
+    headers.insertHost().value(std::string(host));
+    headers.insertScheme().value(Headers::get().SchemeValues.Http);
+    encoder.encodeHeaders(headers, true);
+  }
+  return client != nullptr;
+}
 
 CodecClient::CodecClient(Type type, Network::ClientConnectionPtr&& connection,
                          Event::Dispatcher& dispatcher)
@@ -189,6 +257,7 @@ CodecClientProd::CodecClientProd(Type type, Network::ClientConnectionPtr&& conne
     break;
   }
   case Type::HTTP2: {
+    ASSERT(false);
     // codec_ = std::make_unique<Http2::ClientConnectionImpl>(
     //    *connection_, *this, host->cluster().statsScope(), host->cluster().http2Settings());
     break;
