@@ -33,14 +33,14 @@ class BenchmarkLoop {
 public:
   BenchmarkLoop(Envoy::Event::Dispatcher& dispatcher)
       : dispatcher_(&dispatcher), rps_(0), current_rps_(0), duration_(std::chrono::seconds(5)),
-        requests_(0), max_requests_(0) {
+        requests_(0), max_requests_(0), callback_count_(0) {
     timer_ = dispatcher_->createTimer([this]() { run(true); });
   }
   virtual ~BenchmarkLoop() {}
   void start();
 
 protected:
-  virtual bool tryStartOne() PURE;
+  virtual bool tryStartOne(std::function<void()> completion_callback) PURE;
   // Subclasses can implement this. The benchmark can use a spin loop
   // to improve accuracy in certain cases, when no inbound events are
   // expected.
@@ -59,12 +59,13 @@ private:
   std::chrono::seconds duration_;
   unsigned int requests_;
   unsigned int max_requests_;
+  unsigned int callback_count_;
 };
 
 class HttpBenchmarkTimingLoop : public BenchmarkLoop {
 public:
   HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispatcher) : BenchmarkLoop(dispatcher) {}
-  virtual bool tryStartOne() override { return true; }
+  virtual bool tryStartOne(std::function<void()> completion_callback) override;
 };
 
 } // namespace Nighthawk

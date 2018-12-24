@@ -49,27 +49,34 @@ void BenchmarkLoop::run(bool from_timer) {
   }
 
   while (requests_ < max_requests_ && due_requests-- > 0) {
-    if (!tryStartOne()) {
+    bool started = tryStartOne([this, now]() {
+      auto nanoseconds = std::chrono::high_resolution_clock::now() - now;
+      ASSERT(nanoseconds.count() > 0);
+      // results_.push_back(nanoseconds.count());
+      if (++callback_count_ == this->max_requests_) {
+        dispatcher_->exit();
+        return;
+      }
+      timer_->enableTimer(std::chrono::milliseconds(0));
+    });
+
+    if (!started) {
       scheduleRun();
       return;
     }
 
     ++requests_;
-    /*
-        performRequest(client, [this](std::chrono::nanoseconds nanoseconds) {
-          ASSERT(nanoseconds.count() > 0);
-          results_.push_back(nanoseconds.count());
-          if (++callback_count_ == this->max_requests_) {
-            dispatcher_->exit();
-            return;
-          }
-          timer_->enableTimer(std::chrono::milliseconds(0));
-        });*/
   }
 
   if (from_timer) {
     scheduleRun();
   }
+}
+
+bool HttpBenchmarkTimingLoop::tryStartOne(std::function<void()> completion_callback) {
+  // TODO(oschaaf): XXX
+  completion_callback();
+  return true;
 }
 
 ClientMain::ClientMain(int argc, const char* const* argv) : ClientMain(OptionsImpl(argc, argv)) {}
