@@ -11,6 +11,8 @@
 #include "exe/codec_client.h"
 #include "exe/conn_pool.h"
 
+#include "envoy/stats/store.h"
+
 using namespace Envoy;
 
 namespace Nighthawk {
@@ -34,9 +36,11 @@ private:
 
 class BenchmarkLoop {
 public:
-  BenchmarkLoop(Envoy::Event::Dispatcher& dispatcher)
-      : dispatcher_(&dispatcher), rps_(5), current_rps_(0), duration_(std::chrono::seconds(5)),
-        requests_(0), max_requests_(rps_ * duration_.count()), callback_count_(0) {
+  BenchmarkLoop(Envoy::Event::Dispatcher& dispatcher, Envoy::Stats::Store& store,
+                Envoy::TimeSource& time_source)
+      : store_(store), time_source_(time_source), dispatcher_(&dispatcher), rps_(5),
+        current_rps_(0), duration_(std::chrono::seconds(5)), requests_(0),
+        max_requests_(rps_ * duration_.count()), callback_count_(0) {
     timer_ = dispatcher_->createTimer([this]() { run(true); });
   }
   virtual ~BenchmarkLoop() {}
@@ -57,6 +61,10 @@ protected:
   // e.g. to BenchmarkLoop::allowSpinning().
   virtual bool expectInboundEvents() { return true; }
 
+protected:
+  Envoy::Stats::Store& store_;
+  Envoy::TimeSource& time_source_;
+
 private:
   void scheduleRun();
   void run(bool from_timer);
@@ -75,7 +83,9 @@ private:
 
 class HttpBenchmarkTimingLoop : public BenchmarkLoop, public ConnectionPoolCallbacks {
 public:
-  HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispatcher); // : BenchmarkLoop(dispatcher) {}
+  HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispatcher, Envoy::Stats::Store& store,
+                          Envoy::TimeSource& time_source);
+
   virtual bool tryStartOne(std::function<void()> completion_callback) override;
   void onPoolFailure(Envoy::Http::ConnectionPool::PoolFailureReason reason,
                      Envoy::Upstream::HostDescriptionConstSharedPtr host) override {
@@ -90,7 +100,6 @@ public:
 
 private:
   std::unique_ptr<BenchmarkHttp1ConnPoolImpl> pool_;
-
   //  Http::HttpCodecClientPool pool_;
 };
 

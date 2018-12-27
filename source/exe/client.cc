@@ -17,11 +17,16 @@
 #include "common/network/raw_buffer_socket.h"
 #include "common/network/utility.h"
 
+#include "common/runtime/runtime_impl.h"
+#include "common/thread_local/thread_local_impl.h"
+#include "common/upstream/cluster_manager_impl.h"
 #include "common/upstream/upstream_impl.h"
 #include "envoy/upstream/upstream.h"
 
 #include "exe/benchmarker.h"
 #include "exe/conn_pool.h"
+
+#include "server/transport_socket_config_impl.h"
 
 using namespace Envoy;
 
@@ -77,14 +82,61 @@ void BenchmarkLoop::run(bool from_timer) {
   }
 }
 
-HttpBenchmarkTimingLoop::HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispatcher)
-    : BenchmarkLoop(dispatcher) {
+HttpBenchmarkTimingLoop::HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispatcher,
+                                                 Envoy::Stats::Store& store,
+                                                 Envoy::TimeSource& time_source)
+    : BenchmarkLoop(dispatcher, store, time_source) {
   Network::ConnectionSocket::OptionsSharedPtr options =
       std::make_shared<Network::ConnectionSocket::Options>();
   Envoy::Upstream::ClusterInfoConstSharedPtr cluster;
+
+  envoy::api::v2::Cluster cluster_config;
+  envoy::api::v2::core::BindConfig bind_config;
+  envoy::config::bootstrap::v2::Runtime runtime_config;
+
+  cluster_config.mutable_connect_timeout()->set_seconds(30);
+  Envoy::Stats::ScopePtr scope = store_.createScope(fmt::format(
+      "cluster.{}.", cluster_config.alt_stat_name().empty() ? cluster_config.name()
+                                                            : cluster_config.alt_stat_name()));
+  Runtime::RandomGeneratorImpl generator;
+  ThreadLocal::InstanceImpl tls;
+  Envoy::Runtime::LoaderImpl runtime(generator, store_, tls);
+  // RandomGenerator& generator, Stats::Store& stats, ThreadLocal::SlotAllocator& tls
+  Envoy::Network::TransportSocketFactoryPtr socket_factory =
+      std::make_unique<Network::RawBufferSocketFactory>();
+  auto cluster_info = std::make_unique<Upstream::ClusterInfoImpl>(
+      cluster_config, bind_config, runtime, std::move(socket_factory), std::move(scope),
+      false /*added_via_api*/);
+
   // cluster->http2_settings_.allow_connect_ = true;
   // cluster->http2_settings_.allow_metadata_ = true;
+  /*
+    {
+      const std::string json = R"EOF(
+    {
+      "name": "addressportconfig",
+      "connect_timeout_ms": 250,
+      "type": "static",
+      "lb_type": "fakelbtype",
+      "hosts": [{"url": "tcp://192.168.1.1:22"},
+                {"url": "tcp://192.168.1.2:44"}]
+    }
+    )EOF";
 
+      // Upstream::ClusterManagerImpl cm();
+
+      auto ssl_context_manager = std::make_unique<Ssl::ContextManagerImpl>(time_source_);
+      envoy::api::v2::Cluster cluster_config; // = parseClusterFromJson(json);
+      Envoy::Stats::ScopePtr scope = store_.createScope(fmt::format(
+          "cluster.{}.", cluster_config.alt_stat_name().empty() ? cluster_config.name()
+                                                                : cluster_config.alt_stat_name()));
+      Envoy::Server::Configuration::TransportSocketFactoryContextImpl factory_context(
+          ssl_context_manager, *scope, cm, local_info, dispatcher, random, store_);
+      // StaticClusterImpl(cluster_config, runtime, factory_context, std::move(scope), false);
+      auto cluster = std::make_unique<StaticClusterImpl>(cluster_config, runtime, factory_context,
+                                                         std::move(scope), false);
+    }
+  */
   uint32_t weight = 1;
   auto host = std::shared_ptr<Upstream::Host>{new Upstream::HostImpl(
       cluster, "", Network::Utility::resolveUrl("tcp://127.0.0.1:80"),
@@ -123,13 +175,13 @@ void ClientMain::configureComponentLogLevels() {
 }
 
 bool ClientMain::run() {
-  Stats::IsolatedStoreImpl stats;
+  Stats::IsolatedStoreImpl store;
   // TODO(oschaaf): platform specificity need addressing.
   Thread::ThreadFactoryImplPosix thread_factory;
   auto api = new Envoy::Api::Impl(std::chrono::milliseconds(100) /*flush interval*/, thread_factory,
-                                  stats);
+                                  store);
   auto dispatcher = api->allocateDispatcher(real_time_system_);
-  HttpBenchmarkTimingLoop bml(*dispatcher);
+  HttpBenchmarkTimingLoop bml(*dispatcher, store, real_time_system_);
   bml.start();
   dispatcher->run(Envoy::Event::Dispatcher::RunType::Block);
 
