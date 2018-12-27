@@ -16,7 +16,9 @@
 #include "common/http/headers.h"
 #include "common/network/raw_buffer_socket.h"
 #include "common/network/utility.h"
+
 #include "common/upstream/upstream_impl.h"
+#include "envoy/upstream/upstream.h"
 
 #include "exe/benchmarker.h"
 #include "exe/conn_pool.h"
@@ -79,19 +81,18 @@ HttpBenchmarkTimingLoop::HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispa
     : BenchmarkLoop(dispatcher) {
   Network::ConnectionSocket::OptionsSharedPtr options =
       std::make_shared<Network::ConnectionSocket::Options>();
-  Upstream::HostConstSharedPtr host; // = std::make_shared<Upstream::HostConstSharedPtr>(....);
+  Envoy::Upstream::ClusterInfoConstSharedPtr cluster;
+  // cluster->http2_settings_.allow_connect_ = true;
+  // cluster->http2_settings_.allow_metadata_ = true;
 
-  // auto pool = new BenchmarkHttp1ConnPoolImpl(dispatcher, host,
-  // Upstream::ResourcePriority::Default,
-  //                                           options);
+  uint32_t weight = 1;
+  auto host = std::shared_ptr<Upstream::Host>{new Upstream::HostImpl(
+      cluster, "", Network::Utility::resolveUrl("tcp://127.0.0.1:80"),
+      envoy::api::v2::core::Metadata::default_instance(), weight, envoy::api::v2::core::Locality(),
+      envoy::api::v2::endpoint::Endpoint::HealthCheckConfig::default_instance(), 0)};
+
   pool_ = std::make_unique<BenchmarkHttp1ConnPoolImpl>(
       dispatcher, host, Upstream::ResourcePriority::Default, options);
-  // auto stream_decoder = new Nighthawk::BufferingStreamDecoder([]() -> void {});
-
-  // ConnectionPoolCallbacks callbacks;
-
-  // pool->createCodecClient();public Envoy::Http::ConnectionPool::Callbacks
-  // auto decoder = pool->newStream(*stream_decoder, callbacks);
 }
 
 bool HttpBenchmarkTimingLoop::tryStartOne(std::function<void()> completion_callback) {
@@ -130,11 +131,12 @@ bool ClientMain::run() {
   auto dispatcher = api->allocateDispatcher(real_time_system_);
   HttpBenchmarkTimingLoop bml(*dispatcher);
   bml.start();
+  dispatcher->run(Envoy::Event::Dispatcher::RunType::Block);
 
-  Benchmarker benchmarker(*dispatcher, options_.connections(), options_.requests_per_second(),
-                          options_.duration(), Headers::get().MethodValues.Get, options_.uri());
-  auto dns_resolver = dispatcher->createDnsResolver({});
-  benchmarker.run(dns_resolver);
+  // Benchmarker benchmarker(*dispatcher, options_.connections(), options_.requests_per_second(),
+  //                        options_.duration(), Headers::get().MethodValues.Get, options_.uri());
+  // auto dns_resolver = dispatcher->createDnsResolver({});
+  // benchmarker.run(dns_resolver);
   return true;
 }
 

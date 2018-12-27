@@ -35,8 +35,8 @@ private:
 class BenchmarkLoop {
 public:
   BenchmarkLoop(Envoy::Event::Dispatcher& dispatcher)
-      : dispatcher_(&dispatcher), rps_(0), current_rps_(0), duration_(std::chrono::seconds(5)),
-        requests_(0), max_requests_(0), callback_count_(0) {
+      : dispatcher_(&dispatcher), rps_(5), current_rps_(0), duration_(std::chrono::seconds(5)),
+        requests_(0), max_requests_(rps_ * duration_.count()), callback_count_(0) {
     timer_ = dispatcher_->createTimer([this]() { run(true); });
   }
   virtual ~BenchmarkLoop() {}
