@@ -12,12 +12,14 @@
 #include "common/common/compiler_requirements.h"
 #include "common/common/thread_impl.h"
 #include "common/event/dispatcher_impl.h"
+#include "common/http/header_map_impl.h"
 #include "common/http/headers.h"
 #include "common/network/raw_buffer_socket.h"
 #include "common/network/utility.h"
 #include "common/upstream/upstream_impl.h"
 
 #include "exe/benchmarker.h"
+#include "exe/conn_pool.h"
 
 using namespace Envoy;
 
@@ -73,9 +75,30 @@ void BenchmarkLoop::run(bool from_timer) {
   }
 }
 
+HttpBenchmarkTimingLoop::HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispatcher)
+    : BenchmarkLoop(dispatcher) {
+  Network::ConnectionSocket::OptionsSharedPtr options =
+      std::make_shared<Network::ConnectionSocket::Options>();
+  Upstream::HostConstSharedPtr host; // = std::make_shared<Upstream::HostConstSharedPtr>(....);
+
+  // auto pool = new BenchmarkHttp1ConnPoolImpl(dispatcher, host,
+  // Upstream::ResourcePriority::Default,
+  //                                           options);
+  pool_ = std::make_unique<BenchmarkHttp1ConnPoolImpl>(
+      dispatcher, host, Upstream::ResourcePriority::Default, options);
+  // auto stream_decoder = new Nighthawk::BufferingStreamDecoder([]() -> void {});
+
+  // ConnectionPoolCallbacks callbacks;
+
+  // pool->createCodecClient();public Envoy::Http::ConnectionPool::Callbacks
+  // auto decoder = pool->newStream(*stream_decoder, callbacks);
+}
+
 bool HttpBenchmarkTimingLoop::tryStartOne(std::function<void()> completion_callback) {
-  // TODO(oschaaf): XXX
-  completion_callback();
+  auto stream_decoder = new Nighthawk::BufferingStreamDecoder(
+      [completion_callback]() -> void { completion_callback(); });
+  auto cancellable = pool_->newStream(*stream_decoder, *this);
+  (void)cancellable;
   return true;
 }
 

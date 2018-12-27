@@ -46,13 +46,15 @@ envoy_cc_library(
         "client.cc",
         "codec_client.cc",
         "benchmarker.cc",
-	    "client_options_impl.cc"
+	    "client_options_impl.cc",
+        "conn_pool.cc"
     ],
     hdrs = [
         "client.h",
         "codec_client.h",
         "benchmarker.h",
-    	"client_options_impl.h"
+    	"client_options_impl.h",
+        "conn_pool.h"
     ],
     repository = "@envoy",
     deps = [

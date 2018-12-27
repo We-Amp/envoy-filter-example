@@ -281,6 +281,9 @@ public:
                   Event::Dispatcher& dispatcher);
 };
 
+// TODO(oschaaf): untie from connection pool. check envoy codebase for
+// similar functionality. Ideally we can layer the pooling of codecs on top
+// of the connections.
 class HttpCodecClientPool {
 public:
   HttpCodecClientPool(Envoy::Event::Dispatcher& dispatcher, Envoy::Http::Protocol protocol,

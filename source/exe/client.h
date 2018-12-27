@@ -6,8 +6,10 @@
 #include "common/common/thread.h"
 #include "common/event/real_time_system.h"
 #include "envoy/event/dispatcher.h"
+
 #include "exe/client_options_impl.h"
 #include "exe/codec_client.h"
+#include "exe/conn_pool.h"
 
 using namespace Envoy;
 
@@ -71,12 +73,24 @@ private:
   unsigned int callback_count_;
 };
 
-class HttpBenchmarkTimingLoop : public BenchmarkLoop {
+class HttpBenchmarkTimingLoop : public BenchmarkLoop, public ConnectionPoolCallbacks {
 public:
-  HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispatcher) : BenchmarkLoop(dispatcher) {}
+  HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispatcher); // : BenchmarkLoop(dispatcher) {}
   virtual bool tryStartOne(std::function<void()> completion_callback) override;
+  void onPoolFailure(Envoy::Http::ConnectionPool::PoolFailureReason reason,
+                     Envoy::Upstream::HostDescriptionConstSharedPtr host) override {
+    (void)reason;
+    (void)host;
+  };
+  void onPoolReady(Envoy::Http::StreamEncoder& encoder,
+                   Envoy::Upstream::HostDescriptionConstSharedPtr host) override {
+    (void)encoder;
+    (void)host;
+  };
 
 private:
+  std::unique_ptr<BenchmarkHttp1ConnPoolImpl> pool_;
+
   //  Http::HttpCodecClientPool pool_;
 };
 

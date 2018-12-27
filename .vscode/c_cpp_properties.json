@@ -6,9 +6,10 @@
                 "/usr/include",
                 "/usr/local/include",
                 "${workspaceFolder}/bazel_output_base/external/**",
+                "${workspaceFolder}/envoy/source",
+                "${workspaceFolder}/envoy/include",
                 "${workspaceFolder}/source",
-                "${workspaceFolder}/include",
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/include"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
@@ -20,9 +21,10 @@
                     "/usr/include",
                     "/usr/local/include",
                     "${workspaceFolder}/bazel_output_base/external/**",
+                    "${workspaceFolder}/envoy/source",
+                    "${workspaceFolder}/envoy/include",
                     "${workspaceFolder}/source",
-                    "${workspaceFolder}/include",
-                    "${workspaceFolder}/**"
+                    "${workspaceFolder}/include"
                 ],
                 "limitSymbolsToIncludedHeaders": true,
                 "databaseFilename": ""
