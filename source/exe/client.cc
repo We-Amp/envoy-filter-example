@@ -86,9 +86,6 @@ HttpBenchmarkTimingLoop::HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispa
                                                  Envoy::Stats::Store& store,
                                                  Envoy::TimeSource& time_source)
     : BenchmarkLoop(dispatcher, store, time_source) {
-  Network::ConnectionSocket::OptionsSharedPtr options =
-      std::make_shared<Network::ConnectionSocket::Options>();
-  Envoy::Upstream::ClusterInfoConstSharedPtr cluster;
 
   envoy::api::v2::Cluster cluster_config;
   envoy::api::v2::core::BindConfig bind_config;
@@ -101,46 +98,19 @@ HttpBenchmarkTimingLoop::HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispa
   Runtime::RandomGeneratorImpl generator;
   ThreadLocal::InstanceImpl tls;
   Envoy::Runtime::LoaderImpl runtime(generator, store_, tls);
-  // RandomGenerator& generator, Stats::Store& stats, ThreadLocal::SlotAllocator& tls
+
   Envoy::Network::TransportSocketFactoryPtr socket_factory =
       std::make_unique<Network::RawBufferSocketFactory>();
-  auto cluster_info = std::make_unique<Upstream::ClusterInfoImpl>(
+  Envoy::Upstream::ClusterInfoConstSharedPtr cluster = std::make_unique<Upstream::ClusterInfoImpl>(
       cluster_config, bind_config, runtime, std::move(socket_factory), std::move(scope),
       false /*added_via_api*/);
+  Network::ConnectionSocket::OptionsSharedPtr options =
+      std::make_shared<Network::ConnectionSocket::Options>();
 
-  // cluster->http2_settings_.allow_connect_ = true;
-  // cluster->http2_settings_.allow_metadata_ = true;
-  /*
-    {
-      const std::string json = R"EOF(
-    {
-      "name": "addressportconfig",
-      "connect_timeout_ms": 250,
-      "type": "static",
-      "lb_type": "fakelbtype",
-      "hosts": [{"url": "tcp://192.168.1.1:22"},
-                {"url": "tcp://192.168.1.2:44"}]
-    }
-    )EOF";
-
-      // Upstream::ClusterManagerImpl cm();
-
-      auto ssl_context_manager = std::make_unique<Ssl::ContextManagerImpl>(time_source_);
-      envoy::api::v2::Cluster cluster_config; // = parseClusterFromJson(json);
-      Envoy::Stats::ScopePtr scope = store_.createScope(fmt::format(
-          "cluster.{}.", cluster_config.alt_stat_name().empty() ? cluster_config.name()
-                                                                : cluster_config.alt_stat_name()));
-      Envoy::Server::Configuration::TransportSocketFactoryContextImpl factory_context(
-          ssl_context_manager, *scope, cm, local_info, dispatcher, random, store_);
-      // StaticClusterImpl(cluster_config, runtime, factory_context, std::move(scope), false);
-      auto cluster = std::make_unique<StaticClusterImpl>(cluster_config, runtime, factory_context,
-                                                         std::move(scope), false);
-    }
-  */
-  uint32_t weight = 1;
   auto host = std::shared_ptr<Upstream::Host>{new Upstream::HostImpl(
-      cluster, "", Network::Utility::resolveUrl("tcp://127.0.0.1:80"),
-      envoy::api::v2::core::Metadata::default_instance(), weight, envoy::api::v2::core::Locality(),
+      cluster, "", Network::Utility::resolveUrl("tcp://192.168.2.232:10001"),
+      envoy::api::v2::core::Metadata::default_instance(), 1 /* weight */,
+      envoy::api::v2::core::Locality(),
       envoy::api::v2::endpoint::Endpoint::HealthCheckConfig::default_instance(), 0)};
 
   pool_ = std::make_unique<BenchmarkHttp1ConnPoolImpl>(
@@ -169,9 +139,9 @@ void ClientMain::configureComponentLogLevels() {
   // We rely on Envoy's logging infra.
   // TODO(oschaaf): Add options to tweak the log level of the various log tags
   // that are available.
-  Logger::Registry::setLogLevel(spdlog::level::warn);
+  Logger::Registry::setLogLevel(spdlog::level::trace);
   Logger::Logger* logger_to_change = Logger::Registry::logger("main");
-  logger_to_change->setLevel(spdlog::level::info);
+  logger_to_change->setLevel(spdlog::level::trace);
 }
 
 bool ClientMain::run() {
