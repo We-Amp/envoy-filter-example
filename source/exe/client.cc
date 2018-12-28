@@ -118,7 +118,7 @@ HttpBenchmarkTimingLoop::HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispa
 }
 
 bool HttpBenchmarkTimingLoop::tryStartOne(std::function<void()> completion_callback) {
-  auto stream_decoder = new Nighthawk::BufferingStreamDecoder(
+  auto stream_decoder = new Nighthawk::Http::BufferingStreamDecoder(
       [completion_callback]() -> void { completion_callback(); });
   auto cancellable = pool_->newStream(*stream_decoder, *this);
   (void)cancellable;
