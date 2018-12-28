@@ -38,7 +38,7 @@ private:
   void configureComponentLogLevels();
 };
 
-class BenchmarkLoop {
+class BenchmarkLoop : Envoy::Logger::Loggable<Envoy::Logger::Id::main> {
 public:
   BenchmarkLoop(Envoy::Event::Dispatcher& dispatcher, Envoy::Stats::Store& store,
                 Envoy::TimeSource& time_source, Thread::ThreadFactory& thread_factory)
@@ -94,6 +94,8 @@ public:
   HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispatcher, Envoy::Stats::Store& store,
                           Envoy::TimeSource& time_source, Thread::ThreadFactory& thread_factory);
   virtual bool tryStartOne(std::function<void()> completion_callback) override;
+
+  // TODO(oschaaf): XXX
   void onPoolFailure(Envoy::Http::ConnectionPool::PoolFailureReason reason,
                      Envoy::Upstream::HostDescriptionConstSharedPtr host) override {
     ASSERT(false);
@@ -101,10 +103,7 @@ public:
     (void)host;
   };
   void onPoolReady(Envoy::Http::StreamEncoder& encoder,
-                   Envoy::Upstream::HostDescriptionConstSharedPtr host) override {
-    (void)encoder;
-    (void)host;
-  };
+                   Envoy::Upstream::HostDescriptionConstSharedPtr host) override;
 
 private:
   std::unique_ptr<BenchmarkHttp1ConnPoolImpl> pool_;

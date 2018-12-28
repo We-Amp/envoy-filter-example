@@ -125,6 +125,18 @@ bool HttpBenchmarkTimingLoop::tryStartOne(std::function<void()> completion_callb
   return true;
 }
 
+void HttpBenchmarkTimingLoop::onPoolReady(Envoy::Http::StreamEncoder& encoder,
+                                          Envoy::Upstream::HostDescriptionConstSharedPtr host) {
+  (void)host;
+  HeaderMapImpl headers;
+  headers.insertMethod().value(Headers::get().MethodValues.Get);
+  // TODO(oschaaf): hard coded path and host
+  headers.insertPath().value(std::string("/"));
+  headers.insertHost().value(std::string("127.0.0.1"));
+  headers.insertScheme().value(Headers::get().SchemeValues.Http);
+  encoder.encodeHeaders(headers, true);
+}
+
 ClientMain::ClientMain(int argc, const char* const* argv) : ClientMain(OptionsImpl(argc, argv)) {}
 
 ClientMain::ClientMain(OptionsImpl options) : options_(options) {
@@ -139,17 +151,17 @@ void ClientMain::configureComponentLogLevels() {
   // We rely on Envoy's logging infra.
   // TODO(oschaaf): Add options to tweak the log level of the various log tags
   // that are available.
-  Logger::Registry::setLogLevel(spdlog::level::trace);
+  Logger::Registry::setLogLevel(spdlog::level::info);
   Logger::Logger* logger_to_change = Logger::Registry::logger("main");
-  logger_to_change->setLevel(spdlog::level::trace);
+  logger_to_change->setLevel(spdlog::level::info);
 }
 
 bool ClientMain::run() {
   auto store = std::make_unique<Stats::IsolatedStoreImpl>();
   // TODO(oschaaf): platform specificity need addressing.
   auto thread_factory = Thread::ThreadFactoryImplPosix();
-  auto api = new Envoy::Api::Impl(std::chrono::milliseconds(100) /*flush interval*/, thread_factory,
-                                  *store);
+  auto api = std::make_unique<Envoy::Api::Impl>(std::chrono::milliseconds(1000) /*flush interval*/,
+                                                thread_factory, *store);
   auto dispatcher = api->allocateDispatcher(real_time_system_);
   HttpBenchmarkTimingLoop bml(*dispatcher, *store, real_time_system_, thread_factory);
   bml.start();

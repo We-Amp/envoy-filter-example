@@ -4,7 +4,7 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "build",
+            "label": "debug-build",
             "type": "shell",
             "command": "PATH=/usr/lib/llvm-7/bin:$PATH CC=clang CXX=clang++ bazel build -c dbg //:nighthawk_client",
             "problemMatcher": [
@@ -16,9 +16,33 @@
             }
         },
         {
-            "label": "build-test",
+            "label": "debug-build-test",
             "type": "shell",
             "command": "PATH=/usr/lib/llvm-7/bin:$PATH CC=clang CXX=clang++ bazel build -c dbg //test:nighthawk_test",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "PATH=/usr/lib/llvm-7/bin:$PATH CC=clang CXX=clang++ bazel build -c fastbuild //:nighthawk_client",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "build-test",
+            "type": "shell",
+            "command": "PATH=/usr/lib/llvm-7/bin:$PATH CC=clang CXX=clang++ bazel build -c fastbuild //test:nighthawk_test",
             "problemMatcher": [
                 "$gcc"
             ],
