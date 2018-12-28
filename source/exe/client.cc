@@ -50,7 +50,12 @@ void BenchmarkLoop::run(bool from_timer) {
   if (dur >= duration_) {
     dispatcher_->exit();
     return;
+  } else if (pool_connect_failures_ >= 1) { // TODO(oschaaf): config
+    ENVOY_LOG(error, "Too many connection failures");
+    dispatcher_->exit();
+    return;
   }
+
   if (due_requests == 0 && !expectInboundEvents()) {
     nanosleep((const struct timespec[]){{0, 500L}}, NULL);
     timer_->enableTimer(std::chrono::milliseconds(0));
@@ -92,7 +97,7 @@ HttpBenchmarkTimingLoop::HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispa
   envoy::api::v2::core::BindConfig bind_config;
   envoy::config::bootstrap::v2::Runtime runtime_config;
 
-  cluster_config.mutable_connect_timeout()->set_seconds(30);
+  cluster_config.mutable_connect_timeout()->set_seconds(3);
   Envoy::Stats::ScopePtr scope = store_.createScope(fmt::format(
       "cluster.{}.", cluster_config.alt_stat_name().empty() ? cluster_config.name()
                                                             : cluster_config.alt_stat_name()));
@@ -126,10 +131,19 @@ bool HttpBenchmarkTimingLoop::tryStartOne(std::function<void()> completion_callb
 }
 void HttpBenchmarkTimingLoop::onPoolFailure(Envoy::Http::ConnectionPool::PoolFailureReason reason,
                                             Envoy::Upstream::HostDescriptionConstSharedPtr host) {
-  // TODO(oschaaf): XXX
-  ASSERT(false);
-  (void)reason;
+  // TODO(oschaaf): we can probably pull these counters from the stats,
+  // and therefore do not have to track them ourselves here.
   (void)host;
+  switch (reason) {
+  case Envoy::Http::ConnectionPool::PoolFailureReason::ConnectionFailure:
+    pool_connect_failures_++;
+    break;
+  case Envoy::Http::ConnectionPool::PoolFailureReason::Overflow:
+    pool_overflow_failures_++;
+    break;
+  default: // TODO(oschaaf): XXX
+    ASSERT(false);
+  }
 }
 void HttpBenchmarkTimingLoop::onPoolReady(Envoy::Http::StreamEncoder& encoder,
                                           Envoy::Upstream::HostDescriptionConstSharedPtr host) {

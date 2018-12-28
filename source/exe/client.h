@@ -44,8 +44,9 @@ public:
   BenchmarkLoop(Envoy::Event::Dispatcher& dispatcher, Envoy::Stats::Store& store,
                 Envoy::TimeSource& time_source, Thread::ThreadFactory& thread_factory)
       : store_(store), time_source_(time_source), thread_factory_(thread_factory),
-        dispatcher_(&dispatcher), rps_(5), current_rps_(0), duration_(std::chrono::seconds(5)),
-        requests_(0), max_requests_(rps_ * duration_.count()), callback_count_(0) {
+        pool_connect_failures_(0), pool_overflow_failures_(0), dispatcher_(&dispatcher), rps_(5),
+        current_rps_(0), duration_(std::chrono::seconds(10)), requests_(0),
+        max_requests_(rps_ * duration_.count()), callback_count_(0) {
     timer_ = dispatcher_->createTimer([this]() { run(true); });
   }
   virtual ~BenchmarkLoop() {
@@ -77,6 +78,8 @@ protected:
   Thread::ThreadFactory& thread_factory_;
   std::unique_ptr<Envoy::Runtime::LoaderImpl> runtime_;
   Runtime::RandomGeneratorImpl generator_;
+  uint64_t pool_connect_failures_;
+  uint64_t pool_overflow_failures_;
 
 private:
   void scheduleRun();
