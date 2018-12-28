@@ -84,8 +84,9 @@ void BenchmarkLoop::run(bool from_timer) {
 
 HttpBenchmarkTimingLoop::HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispatcher,
                                                  Envoy::Stats::Store& store,
-                                                 Envoy::TimeSource& time_source)
-    : BenchmarkLoop(dispatcher, store, time_source) {
+                                                 Envoy::TimeSource& time_source,
+                                                 Thread::ThreadFactory& thread_factory)
+    : BenchmarkLoop(dispatcher, store, time_source, thread_factory) {
 
   envoy::api::v2::Cluster cluster_config;
   envoy::api::v2::core::BindConfig bind_config;
@@ -95,14 +96,13 @@ HttpBenchmarkTimingLoop::HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispa
   Envoy::Stats::ScopePtr scope = store_.createScope(fmt::format(
       "cluster.{}.", cluster_config.alt_stat_name().empty() ? cluster_config.name()
                                                             : cluster_config.alt_stat_name()));
-  Runtime::RandomGeneratorImpl generator;
-  ThreadLocal::InstanceImpl tls;
-  Envoy::Runtime::LoaderImpl runtime(generator, store_, tls);
+  tls_ = std::make_unique<ThreadLocal::InstanceImpl>();
+  runtime_ = std::make_unique<Envoy::Runtime::LoaderImpl>(generator_, store_, *tls_);
 
   Envoy::Network::TransportSocketFactoryPtr socket_factory =
       std::make_unique<Network::RawBufferSocketFactory>();
   Envoy::Upstream::ClusterInfoConstSharedPtr cluster = std::make_unique<Upstream::ClusterInfoImpl>(
-      cluster_config, bind_config, runtime, std::move(socket_factory), std::move(scope),
+      cluster_config, bind_config, *runtime_, std::move(socket_factory), std::move(scope),
       false /*added_via_api*/);
   Network::ConnectionSocket::OptionsSharedPtr options =
       std::make_shared<Network::ConnectionSocket::Options>();
@@ -145,16 +145,15 @@ void ClientMain::configureComponentLogLevels() {
 }
 
 bool ClientMain::run() {
-  Stats::IsolatedStoreImpl store;
+  auto store = std::make_unique<Stats::IsolatedStoreImpl>();
   // TODO(oschaaf): platform specificity need addressing.
-  Thread::ThreadFactoryImplPosix thread_factory;
+  auto thread_factory = Thread::ThreadFactoryImplPosix();
   auto api = new Envoy::Api::Impl(std::chrono::milliseconds(100) /*flush interval*/, thread_factory,
-                                  store);
+                                  *store);
   auto dispatcher = api->allocateDispatcher(real_time_system_);
-  HttpBenchmarkTimingLoop bml(*dispatcher, store, real_time_system_);
+  HttpBenchmarkTimingLoop bml(*dispatcher, *store, real_time_system_, thread_factory);
   bml.start();
   dispatcher->run(Envoy::Event::Dispatcher::RunType::Block);
-
   // Benchmarker benchmarker(*dispatcher, options_.connections(), options_.requests_per_second(),
   //                        options_.duration(), Headers::get().MethodValues.Get, options_.uri());
   // auto dns_resolver = dispatcher->createDnsResolver({});

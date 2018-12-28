@@ -13,6 +13,10 @@
 
 #include "envoy/stats/store.h"
 
+// TODO(oschaaf):
+#include "common/runtime/runtime_impl.h"
+#include "common/thread_local/thread_local_impl.h"
+
 using namespace Envoy;
 
 namespace Nighthawk {
@@ -37,13 +41,13 @@ private:
 class BenchmarkLoop {
 public:
   BenchmarkLoop(Envoy::Event::Dispatcher& dispatcher, Envoy::Stats::Store& store,
-                Envoy::TimeSource& time_source)
-      : store_(store), time_source_(time_source), dispatcher_(&dispatcher), rps_(5),
-        current_rps_(0), duration_(std::chrono::seconds(5)), requests_(0),
-        max_requests_(rps_ * duration_.count()), callback_count_(0) {
+                Envoy::TimeSource& time_source, Thread::ThreadFactory& thread_factory)
+      : store_(store), time_source_(time_source), thread_factory_(thread_factory),
+        dispatcher_(&dispatcher), rps_(5), current_rps_(0), duration_(std::chrono::seconds(5)),
+        requests_(0), max_requests_(rps_ * duration_.count()), callback_count_(0) {
     timer_ = dispatcher_->createTimer([this]() { run(true); });
   }
-  virtual ~BenchmarkLoop() {}
+  virtual ~BenchmarkLoop() { tls_->shutdownGlobalThreading(); }
   void start();
 
 protected:
@@ -64,6 +68,10 @@ protected:
 protected:
   Envoy::Stats::Store& store_;
   Envoy::TimeSource& time_source_;
+  std::unique_ptr<ThreadLocal::InstanceImpl> tls_;
+  Thread::ThreadFactory& thread_factory_;
+  std::unique_ptr<Envoy::Runtime::LoaderImpl> runtime_;
+  Runtime::RandomGeneratorImpl generator_;
 
 private:
   void scheduleRun();
@@ -84,11 +92,11 @@ private:
 class HttpBenchmarkTimingLoop : public BenchmarkLoop, public ConnectionPoolCallbacks {
 public:
   HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispatcher, Envoy::Stats::Store& store,
-                          Envoy::TimeSource& time_source);
-
+                          Envoy::TimeSource& time_source, Thread::ThreadFactory& thread_factory);
   virtual bool tryStartOne(std::function<void()> completion_callback) override;
   void onPoolFailure(Envoy::Http::ConnectionPool::PoolFailureReason reason,
                      Envoy::Upstream::HostDescriptionConstSharedPtr host) override {
+    ASSERT(false);
     (void)reason;
     (void)host;
   };
