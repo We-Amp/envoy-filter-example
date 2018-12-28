@@ -23,9 +23,6 @@
 #include "common/upstream/upstream_impl.h"
 #include "envoy/upstream/upstream.h"
 
-#include "exe/benchmarker.h"
-#include "exe/conn_pool.h"
-
 #include "server/transport_socket_config_impl.h"
 
 using namespace Envoy;
@@ -36,8 +33,11 @@ void BenchmarkLoop::start() {
   start_ = std::chrono::high_resolution_clock::now();
   run(false);
   scheduleRun();
+  dispatcher_->run(Envoy::Event::Dispatcher::RunType::NonBlock);
 }
-
+void BenchmarkLoop::waitForCompletion() {
+  dispatcher_->run(Envoy::Event::Dispatcher::RunType::Block);
+}
 void BenchmarkLoop::scheduleRun() { timer_->enableTimer(std::chrono::milliseconds(1)); }
 
 void BenchmarkLoop::run(bool from_timer) {
@@ -113,7 +113,7 @@ HttpBenchmarkTimingLoop::HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispa
       envoy::api::v2::core::Locality(),
       envoy::api::v2::endpoint::Endpoint::HealthCheckConfig::default_instance(), 0)};
 
-  pool_ = std::make_unique<BenchmarkHttp1ConnPoolImpl>(
+  pool_ = std::make_unique<Envoy::Http::Http1::ConnPoolImplProd>(
       dispatcher, host, Upstream::ResourcePriority::Default, options);
 }
 
@@ -124,7 +124,13 @@ bool HttpBenchmarkTimingLoop::tryStartOne(std::function<void()> completion_callb
   (void)cancellable;
   return true;
 }
-
+void HttpBenchmarkTimingLoop::onPoolFailure(Envoy::Http::ConnectionPool::PoolFailureReason reason,
+                                            Envoy::Upstream::HostDescriptionConstSharedPtr host) {
+  // TODO(oschaaf): XXX
+  ASSERT(false);
+  (void)reason;
+  (void)host;
+}
 void HttpBenchmarkTimingLoop::onPoolReady(Envoy::Http::StreamEncoder& encoder,
                                           Envoy::Upstream::HostDescriptionConstSharedPtr host) {
   (void)host;
@@ -151,9 +157,9 @@ void ClientMain::configureComponentLogLevels() {
   // We rely on Envoy's logging infra.
   // TODO(oschaaf): Add options to tweak the log level of the various log tags
   // that are available.
-  Logger::Registry::setLogLevel(spdlog::level::info);
+  Logger::Registry::setLogLevel(spdlog::level::trace);
   Logger::Logger* logger_to_change = Logger::Registry::logger("main");
-  logger_to_change->setLevel(spdlog::level::info);
+  logger_to_change->setLevel(spdlog::level::trace);
 }
 
 bool ClientMain::run() {
@@ -165,7 +171,7 @@ bool ClientMain::run() {
   auto dispatcher = api->allocateDispatcher(real_time_system_);
   HttpBenchmarkTimingLoop bml(*dispatcher, *store, real_time_system_, thread_factory);
   bml.start();
-  dispatcher->run(Envoy::Event::Dispatcher::RunType::Block);
+  bml.waitForCompletion();
   // Benchmarker benchmarker(*dispatcher, options_.connections(), options_.requests_per_second(),
   //                        options_.duration(), Headers::get().MethodValues.Get, options_.uri());
   // auto dns_resolver = dispatcher->createDnsResolver({});

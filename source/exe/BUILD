@@ -17,7 +17,6 @@ load(
 
 load("@envoy//api/bazel:api_build_system.bzl", "api_proto_library_internal")
 load("@envoy//bazel:repositories.bzl", "PPC_SKIP_TARGETS")
-#envoy_package()
 
 api_proto_library_internal(
     name = "benchmark_options",
@@ -45,16 +44,12 @@ envoy_cc_library(
     srcs = [
         "client.cc",
         "codec_client.cc",
-        "benchmarker.cc",
 	    "client_options_impl.cc",
-        "conn_pool.cc"
     ],
     hdrs = [
         "client.h",
         "codec_client.h",
-        "benchmarker.h",
     	"client_options_impl.h",
-        "conn_pool.h"
     ],
     repository = "@envoy",
     deps = [
@@ -69,12 +64,3 @@ envoy_cc_library(
         "@envoy//source/common/common:thread_impl_lib_posix",
     ]
 )
-
-#envoy_cc_library(
-#    name = "platform_impl_lib_posix",
-#    hdrs = ["posix/platform_impl.h"],
-#    strip_include_prefix = "posix",
-#    deps = ["@envoy//source/common/common:thread_lib"],
-#    repository = "@envoy",
-#)
-

@@ -5,7 +5,6 @@
 #include <string>
 
 #include "envoy/common/pure.h"
-#include "nighthawk/client/driver.h"
 #include "source/exe/client_options.pb.h"
 
 namespace Nighthawk {

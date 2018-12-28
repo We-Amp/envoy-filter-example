@@ -7,15 +7,16 @@
 #include "common/event/real_time_system.h"
 #include "envoy/event/dispatcher.h"
 
+#include "envoy/stats/store.h"
 #include "exe/client_options_impl.h"
 #include "exe/codec_client.h"
-#include "exe/conn_pool.h"
-
-#include "envoy/stats/store.h"
 
 // TODO(oschaaf):
 #include "common/runtime/runtime_impl.h"
 #include "common/thread_local/thread_local_impl.h"
+
+#include "common/http/http1/conn_pool.h"
+#include "envoy/upstream/upstream.h"
 
 using namespace Envoy;
 
@@ -47,8 +48,12 @@ public:
         requests_(0), max_requests_(rps_ * duration_.count()), callback_count_(0) {
     timer_ = dispatcher_->createTimer([this]() { run(true); });
   }
-  virtual ~BenchmarkLoop() { tls_->shutdownGlobalThreading(); }
+  virtual ~BenchmarkLoop() {
+    // TODO(oschaaf): check
+    tls_->shutdownGlobalThreading();
+  }
   void start();
+  void waitForCompletion();
 
 protected:
   // Our benchmark measures latency between initiating what we want to measure,
@@ -89,25 +94,20 @@ private:
   unsigned int callback_count_;
 };
 
-class HttpBenchmarkTimingLoop : public BenchmarkLoop, public ConnectionPoolCallbacks {
+class HttpBenchmarkTimingLoop : public BenchmarkLoop,
+                                public Envoy::Http::ConnectionPool::Callbacks {
 public:
   HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispatcher, Envoy::Stats::Store& store,
                           Envoy::TimeSource& time_source, Thread::ThreadFactory& thread_factory);
   virtual bool tryStartOne(std::function<void()> completion_callback) override;
 
-  // TODO(oschaaf): XXX
   void onPoolFailure(Envoy::Http::ConnectionPool::PoolFailureReason reason,
-                     Envoy::Upstream::HostDescriptionConstSharedPtr host) override {
-    ASSERT(false);
-    (void)reason;
-    (void)host;
-  };
+                     Envoy::Upstream::HostDescriptionConstSharedPtr host) override;
   void onPoolReady(Envoy::Http::StreamEncoder& encoder,
                    Envoy::Upstream::HostDescriptionConstSharedPtr host) override;
 
 private:
-  std::unique_ptr<BenchmarkHttp1ConnPoolImpl> pool_;
-  //  Http::HttpCodecClientPool pool_;
+  std::unique_ptr<Envoy::Http::Http1::ConnPoolImpl> pool_;
 };
 
 } // namespace Nighthawk
