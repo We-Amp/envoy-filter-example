@@ -30,6 +30,9 @@
 #include "common/ssl/ssl_socket.h"
 
 #include "envoy/network/transport_socket.h"
+
+#include "openssl/ssl.h" // TLS1_2_VERSION etc
+
 using namespace Envoy;
 
 namespace Nighthawk {
@@ -92,6 +95,31 @@ void BenchmarkLoop::run(bool from_timer) {
   }
 }
 
+const std::string DEFAULT_CIPHER_SUITES =
+#ifndef BORINGSSL_FIPS
+    "[ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]:"
+    "[ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]:"
+#else // BoringSSL FIPS
+    "ECDHE-ECDSA-AES128-GCM-SHA256:"
+    "ECDHE-RSA-AES128-GCM-SHA256:"
+#endif
+    "ECDHE-ECDSA-AES128-SHA:"
+    "ECDHE-RSA-AES128-SHA:"
+    "AES128-GCM-SHA256:"
+    "AES128-SHA:"
+    "ECDHE-ECDSA-AES256-GCM-SHA384:"
+    "ECDHE-RSA-AES256-GCM-SHA384:"
+    "ECDHE-ECDSA-AES256-SHA:"
+    "ECDHE-RSA-AES256-SHA:"
+    "AES256-GCM-SHA384:"
+    "AES256-SHA";
+
+const std::string DEFAULT_ECDH_CURVES =
+#ifndef BORINGSSL_FIPS
+    "X25519:"
+#endif
+    "P-256";
+
 namespace {
 // This SslSocket will be used when SSL secret is not fetched from SDS server.
 class MNotReadySslSocket : public Network::TransportSocket {
@@ -113,37 +141,52 @@ public:
 } // namespace
 
 // TODO(oschaaf): make a concrete implementation out of this one.
-class MClientContextConfigImpl : Ssl::ClientContextConfig {
+class MClientContextConfigImpl : public Ssl::ClientContextConfig {
 public:
+  MClientContextConfigImpl() {}
   virtual ~MClientContextConfigImpl() {}
 
-  virtual const std::string& alpnProtocols() const PURE;
+  virtual const std::string& alpnProtocols() const { return foo_; };
 
-  virtual const std::string& cipherSuites() const PURE;
+  virtual const std::string& cipherSuites() const { return DEFAULT_CIPHER_SUITES; };
 
-  virtual const std::string& ecdhCurves() const PURE;
+  virtual const std::string& ecdhCurves() const { return DEFAULT_ECDH_CURVES; };
 
   virtual std::vector<std::reference_wrapper<const Ssl::TlsCertificateConfig>>
-  tlsCertificates() const PURE;
+  tlsCertificates() const {
+    std::vector<std::reference_wrapper<const Ssl::TlsCertificateConfig>> configs;
+    for (const auto& config : tls_certificate_configs_) {
+      configs.push_back(config);
+    }
+    return configs;
+  };
 
-  virtual const Ssl::CertificateValidationContextConfig* certificateValidationContext() const PURE;
+  virtual const Ssl::CertificateValidationContextConfig* certificateValidationContext() const {
+    return validation_context_config_.get();
+  };
 
-  virtual unsigned minProtocolVersion() const PURE;
+  virtual unsigned minProtocolVersion() const { return TLS1_VERSION; };
 
-  virtual unsigned maxProtocolVersion() const PURE;
+  virtual unsigned maxProtocolVersion() const { return TLS1_2_VERSION; };
 
-  virtual bool isReady() const PURE;
+  virtual bool isReady() const { return true; };
 
-  virtual void setSecretUpdateCallback(std::function<void()> callback) PURE;
+  virtual void setSecretUpdateCallback(std::function<void()> callback) { callback_ = callback; };
 
   // Ssl::ClientContextConfig interface
-  virtual const std::string& serverNameIndication() const PURE;
+  virtual const std::string& serverNameIndication() const { return foo_; };
 
-  virtual bool allowRenegotiation() const PURE;
+  virtual bool allowRenegotiation() const { return true; };
 
-  virtual size_t maxSessionKeys() const PURE;
+  virtual size_t maxSessionKeys() const { return 0; };
 
-  virtual const std::string& signingAlgorithmsForTest() const PURE;
+  virtual const std::string& signingAlgorithmsForTest() const { return foo_; };
+
+private:
+  std::string foo_;
+  std::function<void()> callback_;
+  std::vector<Ssl::TlsCertificateConfigImpl> tls_certificate_configs_;
+  Ssl::CertificateValidationContextConfigPtr validation_context_config_;
 };
 
 class MClientSslSocketFactory : public Network::TransportSocketFactory,
@@ -151,13 +194,11 @@ class MClientSslSocketFactory : public Network::TransportSocketFactory,
                                 Logger::Loggable<Logger::Id::config> {
 public:
   MClientSslSocketFactory(Envoy::Stats::Store& store, Envoy::TimeSource& time_source) {
-    //  ClientContextImpl(Stats::Scope& scope, const ClientContextConfig& config,
-    //              TimeSource& time_source);
-    MClientContextConfigImpl config;
+    // TODO(oschaaf): check for leaks
+    Ssl::ClientContextConfig* config = new MClientContextConfigImpl();
     Envoy::Stats::ScopePtr scope = store.createScope(fmt::format("cluster.{}.", "ssl-client"));
-
     Ssl::ClientContextSharedPtr context =
-        std::make_shared<Ssl::ClientContextImpl>(scope, config, time_source);
+        std::make_shared<Ssl::ClientContextImpl>(*(scope.release()), *config, time_source);
     ssl_ctx_ = context;
   }
   Network::TransportSocketPtr createTransportSocket(
