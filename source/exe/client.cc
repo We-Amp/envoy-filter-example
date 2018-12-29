@@ -25,6 +25,11 @@
 
 #include "server/transport_socket_config_impl.h"
 
+#include "common/ssl/context_config_impl.h"
+#include "common/ssl/context_manager_impl.h"
+#include "common/ssl/ssl_socket.h"
+
+#include "envoy/network/transport_socket.h"
 using namespace Envoy;
 
 namespace Nighthawk {
@@ -87,6 +92,63 @@ void BenchmarkLoop::run(bool from_timer) {
   }
 }
 
+namespace {
+// This SslSocket will be used when SSL secret is not fetched from SDS server.
+class MNotReadySslSocket : public Network::TransportSocket {
+public:
+  // Network::TransportSocket
+  void setTransportSocketCallbacks(Network::TransportSocketCallbacks&) override {}
+  std::string protocol() const override { return EMPTY_STRING; }
+  bool canFlushClose() override { return true; }
+  void closeSocket(Network::ConnectionEvent) override {}
+  Network::IoResult doRead(Buffer::Instance&) override {
+    return {Envoy::Network::PostIoAction::Close, 0, false};
+  }
+  Network::IoResult doWrite(Buffer::Instance&, bool) override {
+    return {Envoy::Network::PostIoAction::Close, 0, false};
+  }
+  void onConnected() override {}
+  const Ssl::Connection* ssl() const override { return nullptr; }
+};
+} // namespace
+
+class MClientSslSocketFactory : public Network::TransportSocketFactory,
+                                public Secret::SecretCallbacks,
+                                Logger::Loggable<Logger::Id::config> {
+public:
+  Network::TransportSocketPtr createTransportSocket(
+      Network::TransportSocketOptionsSharedPtr transport_socket_options) const override {
+    // onAddOrUpdateSecret() could be invoked in the middle of checking the existence of ssl_ctx and
+    // creating SslSocket using ssl_ctx. Capture ssl_ctx_ into a local variable so that we check and
+    // use the same ssl_ctx to create SslSocket.
+    Ssl::ClientContextSharedPtr ssl_ctx;
+    {
+      absl::ReaderMutexLock l(&ssl_ctx_mu_);
+      ssl_ctx = ssl_ctx_;
+    }
+    if (ssl_ctx) {
+      return std::make_unique<Ssl::SslSocket>(std::move(ssl_ctx), Ssl::InitialState::Client,
+                                              transport_socket_options);
+    } else {
+      ENVOY_LOG(debug, "Create NotReadySslSocket");
+      return std::make_unique<MNotReadySslSocket>();
+    }
+  }
+
+  bool implementsSecureTransport() const override { return true; };
+
+  // Secret::SecretCallbacks
+  void onAddOrUpdateSecret() override { ; }
+
+private:
+  // Ssl::ContextManager& manager_;
+  // Stats::Scope& stats_scope_;
+  // SslSocketFactoryStats stats_;
+  // ClientContextConfigPtr config_;
+  mutable absl::Mutex ssl_ctx_mu_;
+  Ssl::ClientContextSharedPtr ssl_ctx_ GUARDED_BY(ssl_ctx_mu_);
+};
+
 HttpBenchmarkTimingLoop::HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispatcher,
                                                  Envoy::Stats::Store& store,
                                                  Envoy::TimeSource& time_source,
@@ -104,11 +166,15 @@ HttpBenchmarkTimingLoop::HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispa
   tls_ = std::make_unique<ThreadLocal::InstanceImpl>();
   runtime_ = std::make_unique<Envoy::Runtime::LoaderImpl>(generator_, store_, *tls_);
 
-  Envoy::Network::TransportSocketFactoryPtr socket_factory =
-      std::make_unique<Network::RawBufferSocketFactory>();
+  // Envoy::Network::TransportSocketFactoryPtr socket_factory =
+  //    std::make_unique<Network::RawBufferSocketFactory>();
+
+  auto socket_factory = Network::TransportSocketFactoryPtr{new MClientSslSocketFactory()};
+
   Envoy::Upstream::ClusterInfoConstSharedPtr cluster = std::make_unique<Upstream::ClusterInfoImpl>(
       cluster_config, bind_config, *runtime_, std::move(socket_factory), std::move(scope),
       false /*added_via_api*/);
+
   Network::ConnectionSocket::OptionsSharedPtr options =
       std::make_shared<Network::ConnectionSocket::Options>();
 
@@ -133,6 +199,7 @@ void HttpBenchmarkTimingLoop::onPoolFailure(Envoy::Http::ConnectionPool::PoolFai
                                             Envoy::Upstream::HostDescriptionConstSharedPtr host) {
   // TODO(oschaaf): we can probably pull these counters from the stats,
   // and therefore do not have to track them ourselves here.
+  // TODO(oschaaf): unify termination of the flow here and from the stream decoder.
   (void)host;
   switch (reason) {
   case Envoy::Http::ConnectionPool::PoolFailureReason::ConnectionFailure:
@@ -141,7 +208,7 @@ void HttpBenchmarkTimingLoop::onPoolFailure(Envoy::Http::ConnectionPool::PoolFai
   case Envoy::Http::ConnectionPool::PoolFailureReason::Overflow:
     pool_overflow_failures_++;
     break;
-  default: // TODO(oschaaf): XXX
+  default:
     ASSERT(false);
   }
 }
