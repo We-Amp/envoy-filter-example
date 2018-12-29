@@ -112,10 +112,54 @@ public:
 };
 } // namespace
 
+// TODO(oschaaf): make a concrete implementation out of this one.
+class MClientContextConfigImpl : Ssl::ClientContextConfig {
+public:
+  virtual ~MClientContextConfigImpl() {}
+
+  virtual const std::string& alpnProtocols() const PURE;
+
+  virtual const std::string& cipherSuites() const PURE;
+
+  virtual const std::string& ecdhCurves() const PURE;
+
+  virtual std::vector<std::reference_wrapper<const Ssl::TlsCertificateConfig>>
+  tlsCertificates() const PURE;
+
+  virtual const Ssl::CertificateValidationContextConfig* certificateValidationContext() const PURE;
+
+  virtual unsigned minProtocolVersion() const PURE;
+
+  virtual unsigned maxProtocolVersion() const PURE;
+
+  virtual bool isReady() const PURE;
+
+  virtual void setSecretUpdateCallback(std::function<void()> callback) PURE;
+
+  // Ssl::ClientContextConfig interface
+  virtual const std::string& serverNameIndication() const PURE;
+
+  virtual bool allowRenegotiation() const PURE;
+
+  virtual size_t maxSessionKeys() const PURE;
+
+  virtual const std::string& signingAlgorithmsForTest() const PURE;
+};
+
 class MClientSslSocketFactory : public Network::TransportSocketFactory,
                                 public Secret::SecretCallbacks,
                                 Logger::Loggable<Logger::Id::config> {
 public:
+  MClientSslSocketFactory(Envoy::Stats::Store& store, Envoy::TimeSource& time_source) {
+    //  ClientContextImpl(Stats::Scope& scope, const ClientContextConfig& config,
+    //              TimeSource& time_source);
+    MClientContextConfigImpl config;
+    Envoy::Stats::ScopePtr scope = store.createScope(fmt::format("cluster.{}.", "ssl-client"));
+
+    Ssl::ClientContextSharedPtr context =
+        std::make_shared<Ssl::ClientContextImpl>(scope, config, time_source);
+    ssl_ctx_ = context;
+  }
   Network::TransportSocketPtr createTransportSocket(
       Network::TransportSocketOptionsSharedPtr transport_socket_options) const override {
     // onAddOrUpdateSecret() could be invoked in the middle of checking the existence of ssl_ctx and
@@ -124,6 +168,14 @@ public:
     Ssl::ClientContextSharedPtr ssl_ctx;
     {
       absl::ReaderMutexLock l(&ssl_ctx_mu_);
+      //  ClientContextImpl(Stats::Scope& scope, const ClientContextConfig& config,
+      //              TimeSource& time_source);
+
+      // Ssl::ClientContextSharedPtr context =
+      //    std::make_shared<Ssl::ClientContextImpl>(scope, config, time_source_);
+      // removeEmptyContexts();
+      // contexts_.emplace_back(context);
+
       ssl_ctx = ssl_ctx_;
     }
     if (ssl_ctx) {
@@ -138,7 +190,13 @@ public:
   bool implementsSecureTransport() const override { return true; };
 
   // Secret::SecretCallbacks
-  void onAddOrUpdateSecret() override { ; }
+  void onAddOrUpdateSecret() override {
+    ENVOY_LOG(debug, "Secret is updated.");
+    {
+      absl::WriterMutexLock l(&ssl_ctx_mu_);
+      // ssl_ctx_ = manager_.createSslClientContext(stats_scope_, *config_);
+    }
+  }
 
 private:
   // Ssl::ContextManager& manager_;
@@ -169,7 +227,8 @@ HttpBenchmarkTimingLoop::HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispa
   // Envoy::Network::TransportSocketFactoryPtr socket_factory =
   //    std::make_unique<Network::RawBufferSocketFactory>();
 
-  auto socket_factory = Network::TransportSocketFactoryPtr{new MClientSslSocketFactory()};
+  auto socket_factory =
+      Network::TransportSocketFactoryPtr{new MClientSslSocketFactory(store, time_source)};
 
   Envoy::Upstream::ClusterInfoConstSharedPtr cluster = std::make_unique<Upstream::ClusterInfoImpl>(
       cluster_config, bind_config, *runtime_, std::move(socket_factory), std::move(scope),
@@ -179,7 +238,7 @@ HttpBenchmarkTimingLoop::HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispa
       std::make_shared<Network::ConnectionSocket::Options>();
 
   auto host = std::shared_ptr<Upstream::Host>{new Upstream::HostImpl(
-      cluster, "", Network::Utility::resolveUrl("tcp://192.168.2.232:10001"),
+      cluster, "", Network::Utility::resolveUrl("tcp://192.168.2.232:443"),
       envoy::api::v2::core::Metadata::default_instance(), 1 /* weight */,
       envoy::api::v2::core::Locality(),
       envoy::api::v2::endpoint::Endpoint::HealthCheckConfig::default_instance(), 0)};
