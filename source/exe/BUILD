@@ -43,12 +43,12 @@ envoy_cc_library(
     name = "nighthawk_client_common_lib",
     srcs = [
         "client.cc",
-        "codec_client.cc",
+        "stream_decoder.cc",
 	    "client_options_impl.cc",
     ],
     hdrs = [
         "client.h",
-        "codec_client.h",
+        "stream_decoder.h",
     	"client_options_impl.h",
     ],
     repository = "@envoy",

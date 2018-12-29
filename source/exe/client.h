@@ -9,7 +9,7 @@
 
 #include "envoy/stats/store.h"
 #include "exe/client_options_impl.h"
-#include "exe/codec_client.h"
+#include "exe/stream_decoder.h"
 
 // TODO(oschaaf):
 #include "common/runtime/runtime_impl.h"

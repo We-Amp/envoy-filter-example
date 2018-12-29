@@ -1,19 +1,6 @@
 #pragma once
 
-#include <cstdint>
-#include <list>
-#include <memory>
-
-#include "envoy/event/deferred_deletable.h"
-#include "envoy/event/timer.h"
-#include "envoy/network/connection.h"
-#include "envoy/network/filter.h"
-//#include "envoy/upstream/upstream.h"
-#include "common/common/assert.h"
-#include "common/common/linked_object.h"
-#include "common/common/logger.h"
 #include "common/http/codec_wrappers.h"
-#include "common/network/filter_impl.h"
 
 using namespace Envoy;
 using namespace Envoy::Http;
@@ -24,9 +11,9 @@ namespace Http {
 /**
  * A self destructing response decoder that discards the response body.
  */
-class BufferingStreamDecoder : public StreamDecoder, public StreamCallbacks {
+class StreamDecoder : public Envoy::Http::StreamDecoder, public Envoy::Http::StreamCallbacks {
 public:
-  BufferingStreamDecoder(std::function<void()> on_complete_cb) : on_complete_cb_(on_complete_cb) {}
+  StreamDecoder(std::function<void()> on_complete_cb) : on_complete_cb_(on_complete_cb) {}
 
   bool complete() { return complete_; }
   const HeaderMap& headers() { return *headers_; }
@@ -50,8 +37,6 @@ private:
   bool complete_{};
   std::function<void()> on_complete_cb_;
 };
-
-typedef std::unique_ptr<BufferingStreamDecoder> BufferingStreamDecoderPtr;
 
 } // namespace Http
 } // namespace Nighthawk
