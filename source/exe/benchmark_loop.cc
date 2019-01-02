@@ -234,11 +234,10 @@ void HttpBenchmarkTimingLoop::initialize() {
 }
 
 void HttpBenchmarkTimingLoop::onPoolFailure(Envoy::Http::ConnectionPool::PoolFailureReason reason,
-                                            Envoy::Upstream::HostDescriptionConstSharedPtr host) {
+                                            Envoy::Upstream::HostDescriptionConstSharedPtr) {
   // TODO(oschaaf): we can probably pull these counters from the stats,
   // and therefore do not have to track them ourselves here.
   // TODO(oschaaf): unify termination of the flow here and from the stream decoder.
-  (void)host;
   switch (reason) {
   case Envoy::Http::ConnectionPool::PoolFailureReason::ConnectionFailure:
     pool_connect_failures_++;
@@ -251,11 +250,9 @@ void HttpBenchmarkTimingLoop::onPoolFailure(Envoy::Http::ConnectionPool::PoolFai
   }
 }
 void HttpBenchmarkTimingLoop::onPoolReady(Envoy::Http::StreamEncoder& encoder,
-                                          Envoy::Upstream::HostDescriptionConstSharedPtr host) {
-  (void)host;
+                                          Envoy::Upstream::HostDescriptionConstSharedPtr) {
   HeaderMapImpl headers;
   headers.insertMethod().value(Headers::get().MethodValues.Get);
-  // TODO(oschaaf): hard coded path and host
   headers.insertPath().value(std::string(path_));
   headers.insertHost().value(std::string(host_));
   headers.insertScheme().value(is_https_ ? Headers::get().SchemeValues.Https

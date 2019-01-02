@@ -52,10 +52,10 @@ bool ClientMain::run() {
                               options_.h2());
   if (bml.start()) {
     bml.waitForCompletion();
-    // TODO(oschaaf): should return false on runs failing on
-    // other things than the the initial dns lookup.
     return true;
   }
+  // TODO(oschaaf): should return false on runs failing on
+  // other things than only the initial dns lookup.
   return false;
 }
 
