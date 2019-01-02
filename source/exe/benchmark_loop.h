@@ -25,18 +25,9 @@ class BenchmarkLoop : Envoy::Logger::Loggable<Envoy::Logger::Id::main> {
 public:
   BenchmarkLoop(Envoy::Event::Dispatcher& dispatcher, Envoy::Stats::Store& store,
                 Envoy::TimeSource& time_source, Thread::ThreadFactory& thread_factory, uint64_t rps,
-                std::chrono::seconds duration)
-      : store_(store), time_source_(time_source), thread_factory_(thread_factory),
-        pool_connect_failures_(0), pool_overflow_failures_(0), dispatcher_(&dispatcher), rps_(rps),
-        current_rps_(0), duration_(duration), requests_(0), max_requests_(rps_ * duration_.count()),
-        callback_count_(0) {
-    timer_ = dispatcher_->createTimer([this]() { run(true); });
-  }
-  virtual ~BenchmarkLoop() {
-    // TODO(oschaaf): check
-    tls_->shutdownGlobalThreading();
-  }
-  void start();
+                std::chrono::seconds duration, std::string uri);
+  virtual ~BenchmarkLoop();
+  bool start();
   void waitForCompletion();
 
 protected:
@@ -53,9 +44,12 @@ protected:
   // TODO(oschaaf): consider renaming this to something in the benchmark loop context,
   // e.g. to BenchmarkLoop::allowSpinning().
   virtual bool expectInboundEvents() { return true; }
+  virtual void initialize();
 
 protected:
+  Envoy::Event::Dispatcher& dispatcher_;
   Envoy::Stats::Store& store_;
+  Event::TimerPtr timer_;
   Envoy::TimeSource& time_source_;
   std::unique_ptr<ThreadLocal::InstanceImpl> tls_;
   Thread::ThreadFactory& thread_factory_;
@@ -65,12 +59,18 @@ protected:
   uint64_t pool_connect_failures_;
   uint64_t pool_overflow_failures_;
 
+  // parsed and interpreted uri components
+  bool is_https_;
+  std::string host_;
+  uint32_t port_;
+  std::string path_;
+  bool dns_failure_;
+  Network::Address::InstanceConstSharedPtr target_address_;
+
 private:
   void scheduleRun();
   void run(bool from_timer);
 
-  Envoy::Event::Dispatcher* dispatcher_;
-  Event::TimerPtr timer_;
   // TODO(oschaaf): use TimeSource abstraction.
   std::chrono::time_point<std::chrono::high_resolution_clock> start_;
   uint64_t rps_;
@@ -79,6 +79,8 @@ private:
   uint64_t requests_;
   uint64_t max_requests_;
   uint64_t callback_count_;
+  std::string uri_;
+  std::string method_;
 };
 
 class HttpBenchmarkTimingLoop : public BenchmarkLoop,
@@ -87,7 +89,7 @@ public:
   HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispatcher, Envoy::Stats::Store& store,
                           Envoy::TimeSource& time_source, Thread::ThreadFactory& thread_factory,
                           uint64_t rps, std::chrono::seconds duration, uint64_t max_connections,
-                          std::chrono::seconds timeout);
+                          std::chrono::seconds timeout, std::string uri);
   virtual bool tryStartOne(std::function<void()> completion_callback) override;
 
   // ConnectionPool::Callbacks
@@ -97,6 +99,10 @@ public:
                    Envoy::Upstream::HostDescriptionConstSharedPtr host) override;
 
 private:
+  virtual void initialize() override;
+
+  std::chrono::seconds timeout_;
+  uint64_t max_connections_;
   Envoy::Http::ConnectionPool::InstancePtr pool_;
 };
 

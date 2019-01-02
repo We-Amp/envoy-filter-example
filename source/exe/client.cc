@@ -21,11 +21,11 @@ namespace Nighthawk {
 
 ClientMain::ClientMain(int argc, const char* const* argv) : ClientMain(OptionsImpl(argc, argv)) {}
 
-ClientMain::ClientMain(OptionsImpl options) : options_(options) {
+ClientMain::ClientMain(OptionsImpl options)
+    : options_(options), time_system_(std::make_unique<Envoy::Event::RealTimeSystem>()) {
   ares_library_init(ARES_LIB_INIT_ALL);
   Event::Libevent::Global::initialize();
   configureComponentLogLevels();
-  time_system_ = std::make_unique<Envoy::Event::RealTimeSystem>();
 }
 
 ClientMain::~ClientMain() { ares_library_cleanup(); }
@@ -34,9 +34,9 @@ void ClientMain::configureComponentLogLevels() {
   // We rely on Envoy's logging infra.
   // TODO(oschaaf): Add options to tweak the log level of the various log tags
   // that are available.
-  Logger::Registry::setLogLevel(spdlog::level::trace);
+  Logger::Registry::setLogLevel(spdlog::level::info);
   Logger::Logger* logger_to_change = Envoy::Logger::Registry::logger("main");
-  logger_to_change->setLevel(spdlog::level::trace);
+  logger_to_change->setLevel(spdlog::level::info);
 }
 
 bool ClientMain::run() {
@@ -48,14 +48,14 @@ bool ClientMain::run() {
   auto dispatcher = api->allocateDispatcher(*time_system_);
   HttpBenchmarkTimingLoop bml(*dispatcher, *store, *time_system_, thread_factory,
                               options_.requests_per_second(), options_.duration(),
-                              options_.connections(), options_.timeout());
-  bml.start();
-  bml.waitForCompletion();
-  // Benchmarker benchmarker(*dispatcher, options_.connections(), options_.requests_per_second(),
-  //                        options_.duration(), Headers::get().MethodValues.Get, options_.uri());
-  // auto dns_resolver = dispatcher->createDnsResolver({});
-  // benchmarker.run(dns_resolver);
-  return true;
+                              options_.connections(), options_.timeout(), options_.uri());
+  if (bml.start()) {
+    bml.waitForCompletion();
+    // TODO(oschaaf): should return false on runs failing on
+    // other things than the the initial dns lookup.
+    return true;
+  }
+  return false;
 }
 
 } // namespace Nighthawk

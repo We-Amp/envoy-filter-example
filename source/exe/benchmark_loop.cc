@@ -29,14 +29,78 @@ using namespace Envoy;
 
 namespace Nighthawk {
 
-void BenchmarkLoop::start() {
+BenchmarkLoop::BenchmarkLoop(Envoy::Event::Dispatcher& dispatcher, Envoy::Stats::Store& store,
+                             Envoy::TimeSource& time_source, Thread::ThreadFactory& thread_factory,
+                             uint64_t rps, std::chrono::seconds duration, std::string uri)
+    : dispatcher_(dispatcher), store_(store),
+      timer_(dispatcher_.createTimer([this]() { run(true); })), time_source_(time_source),
+      thread_factory_(thread_factory), pool_connect_failures_(0), pool_overflow_failures_(0),
+      is_https_(false), host_(""), port_(0), path_("/"), rps_(rps), current_rps_(0),
+      duration_(duration), requests_(0), max_requests_(rps_ * duration_.count()),
+      callback_count_(0), uri_(uri) {
+  // parse incoming uri into fields that we need.
+  // TODO(oschaaf): refactor. also input validation, etc.
+  absl::string_view host, path;
+  Envoy::Http::Utility::extractHostPathFromUri(uri, host, path);
+  host_ = std::string(host);
+  path_ = std::string(path);
+
+  size_t colon_index = host_.find(':');
+  is_https_ = uri.find("https://") == 0;
+
+  if (colon_index == std::string::npos) {
+    port_ = is_https_ ? 443 : 80;
+  } else {
+    std::string tcp_url = fmt::format("tcp://{}", this->host_);
+    port_ = Network::Utility::portFromTcpUrl(tcp_url);
+    host_ = host_.substr(0, colon_index);
+  }
+
+  ENVOY_LOG(info, "uri {} -> is_https [{}] | host [{}] | path [{}] | port [{}]", uri, is_https_,
+            host_, path_, port_);
+}
+
+BenchmarkLoop::~BenchmarkLoop() {
+  // TODO(oschaaf): check
+  tls_->shutdownGlobalThreading();
+}
+
+void BenchmarkLoop::initialize() {
+  // TODO(oschaaf): ipv6, refactor dns stuff into separate call
+  auto dns_resolver = dispatcher_.createDnsResolver({});
+  Network::ActiveDnsQuery* active_dns_query_ = dns_resolver->resolve(
+      host_, Network::DnsLookupFamily::V4Only,
+      [this, &active_dns_query_](
+          const std::list<Network::Address::InstanceConstSharedPtr>&& address_list) -> void {
+        active_dns_query_ = nullptr;
+        ENVOY_LOG(debug, "DNS resolution complete for {} ({} entries).", this->host_,
+                  address_list.size());
+        if (!address_list.empty()) {
+          dns_failure_ = false;
+          target_address_ = Network::Utility::getAddressWithPort(*address_list.front(), port_);
+        } else {
+          ENVOY_LOG(critical, "Could not resolve host [{}]", host_);
+        }
+        dispatcher_.exit();
+      });
+  // Wait for DNS resolution to complete before proceeding.
+  dispatcher_.run(Envoy::Event::Dispatcher::RunType::Block);
+}
+
+bool BenchmarkLoop::start() {
+  initialize();
+  if (dns_failure_) {
+    return false;
+  }
+
   start_ = std::chrono::high_resolution_clock::now();
   run(false);
   scheduleRun();
-  dispatcher_->run(Envoy::Event::Dispatcher::RunType::NonBlock);
+  dispatcher_.run(Envoy::Event::Dispatcher::RunType::NonBlock);
+  return true;
 }
 void BenchmarkLoop::waitForCompletion() {
-  dispatcher_->run(Envoy::Event::Dispatcher::RunType::Block);
+  dispatcher_.run(Envoy::Event::Dispatcher::RunType::Block);
 }
 void BenchmarkLoop::scheduleRun() { timer_->enableTimer(std::chrono::milliseconds(1)); }
 
@@ -48,11 +112,15 @@ void BenchmarkLoop::run(bool from_timer) {
   int due_requests = ((rps_ - current_rps_)) * (ms_dur / 1000.0);
 
   if (dur >= duration_) {
-    dispatcher_->exit();
+    ENVOY_LOG(info, "requested: {} completed:{} rps: {}", requests_, callback_count_, current_rps_);
+    ENVOY_LOG(info, "{} ms benmark run completed.", ms_dur);
+
+    dispatcher_.exit();
     return;
   } else if (pool_connect_failures_ >= 1) { // TODO(oschaaf): config
     ENVOY_LOG(error, "Too many connection failures");
-    dispatcher_->exit();
+    dispatcher_.exit();
+    // TODO(oschaaf): program should return exit code here.
     return;
   }
 
@@ -67,10 +135,6 @@ void BenchmarkLoop::run(bool from_timer) {
       auto nanoseconds = std::chrono::high_resolution_clock::now() - now;
       ASSERT(nanoseconds.count() > 0);
       // results_.push_back(nanoseconds.count());
-      if (++callback_count_ == this->max_requests_) {
-        dispatcher_->exit();
-        return;
-      }
       timer_->enableTimer(std::chrono::milliseconds(0));
     });
 
@@ -87,20 +151,35 @@ void BenchmarkLoop::run(bool from_timer) {
   }
 }
 
-HttpBenchmarkTimingLoop::HttpBenchmarkTimingLoop(
-    Envoy::Event::Dispatcher& dispatcher, Envoy::Stats::Store& store,
-    Envoy::TimeSource& time_source, Thread::ThreadFactory& thread_factory, uint64_t rps,
-    std::chrono::seconds duration, uint64_t max_connections, std::chrono::seconds timeout)
-    : BenchmarkLoop(dispatcher, store, time_source, thread_factory, rps, duration) {
+HttpBenchmarkTimingLoop::HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispatcher,
+                                                 Envoy::Stats::Store& store,
+                                                 Envoy::TimeSource& time_source,
+                                                 Thread::ThreadFactory& thread_factory,
+                                                 uint64_t rps, std::chrono::seconds duration,
+                                                 uint64_t max_connections,
+                                                 std::chrono::seconds timeout, std::string uri)
+    : BenchmarkLoop(dispatcher, store, time_source, thread_factory, rps, duration, uri),
+      timeout_(timeout), max_connections_(max_connections) {}
 
+bool HttpBenchmarkTimingLoop::tryStartOne(std::function<void()> completion_callback) {
+  auto stream_decoder = new Nighthawk::Http::StreamDecoder(
+      [completion_callback]() -> void { completion_callback(); });
+  auto cancellable = pool_->newStream(*stream_decoder, *this);
+  (void)cancellable;
+  return true;
+}
+
+void HttpBenchmarkTimingLoop::initialize() {
+
+  BenchmarkLoop::initialize();
   envoy::api::v2::Cluster cluster_config;
   envoy::api::v2::core::BindConfig bind_config;
   envoy::config::bootstrap::v2::Runtime runtime_config;
 
   auto thresholds = cluster_config.mutable_circuit_breakers()->add_thresholds();
 
-  cluster_config.mutable_connect_timeout()->set_seconds(timeout.count());
-  thresholds->mutable_max_connections()->set_value(max_connections);
+  cluster_config.mutable_connect_timeout()->set_seconds(timeout_.count());
+  thresholds->mutable_max_connections()->set_value(max_connections_);
 
   Envoy::Stats::ScopePtr scope = store_.createScope(fmt::format(
       "cluster.{}.", cluster_config.alt_stat_name().empty() ? cluster_config.name()
@@ -108,11 +187,13 @@ HttpBenchmarkTimingLoop::HttpBenchmarkTimingLoop(
   tls_ = std::make_unique<ThreadLocal::InstanceImpl>();
   runtime_ = std::make_unique<Envoy::Runtime::LoaderImpl>(generator_, store_, *tls_);
 
-  // Envoy::Network::TransportSocketFactoryPtr socket_factory =
-  //    std::make_unique<Network::RawBufferSocketFactory>();
-
-  auto socket_factory =
-      Network::TransportSocketFactoryPtr{new Ssl::MClientSslSocketFactory(store, time_source)};
+  Network::TransportSocketFactoryPtr socket_factory;
+  if (is_https_) {
+    socket_factory =
+        Network::TransportSocketFactoryPtr{new Ssl::MClientSslSocketFactory(store_, time_source_)};
+  } else {
+    socket_factory = std::make_unique<Network::RawBufferSocketFactory>();
+  };
 
   Envoy::Upstream::ClusterInfoConstSharedPtr cluster = std::make_unique<Upstream::ClusterInfoImpl>(
       cluster_config, bind_config, *runtime_, std::move(socket_factory), std::move(scope),
@@ -122,25 +203,21 @@ HttpBenchmarkTimingLoop::HttpBenchmarkTimingLoop(
       std::make_shared<Network::ConnectionSocket::Options>();
 
   auto host = std::shared_ptr<Upstream::Host>{new Upstream::HostImpl(
-      cluster, "", Network::Utility::resolveUrl("tcp://127.0.0.1:443"),
-      envoy::api::v2::core::Metadata::default_instance(), 1 /* weight */,
-      envoy::api::v2::core::Locality(),
+      cluster, host_, target_address_, envoy::api::v2::core::Metadata::default_instance(),
+      1 /* weight */, envoy::api::v2::core::Locality(),
       envoy::api::v2::endpoint::Endpoint::HealthCheckConfig::default_instance(), 0)};
 
-  // pool_ = std::make_unique<Envoy::Http::Http1::ConnPoolImplProd>(
-  //    dispatcher, host, Upstream::ResourcePriority::Default, options);
-
-  pool_ = std::make_unique<Envoy::Http::Http2::ProdConnPoolImpl>(
-      dispatcher, host, Upstream::ResourcePriority::Default, options);
+  // TODO(oschaaf): For now we assume h/2 support is available when
+  // using secure transport. This doesn't make sense though, revisit later.
+  if (is_https_) {
+    pool_ = std::make_unique<Envoy::Http::Http2::ProdConnPoolImpl>(
+        dispatcher_, host, Upstream::ResourcePriority::Default, options);
+  } else {
+    pool_ = std::make_unique<Envoy::Http::Http1::ConnPoolImplProd>(
+        dispatcher_, host, Upstream::ResourcePriority::Default, options);
+  }
 }
 
-bool HttpBenchmarkTimingLoop::tryStartOne(std::function<void()> completion_callback) {
-  auto stream_decoder = new Nighthawk::Http::StreamDecoder(
-      [completion_callback]() -> void { completion_callback(); });
-  auto cancellable = pool_->newStream(*stream_decoder, *this);
-  (void)cancellable;
-  return true;
-}
 void HttpBenchmarkTimingLoop::onPoolFailure(Envoy::Http::ConnectionPool::PoolFailureReason reason,
                                             Envoy::Upstream::HostDescriptionConstSharedPtr host) {
   // TODO(oschaaf): we can probably pull these counters from the stats,
