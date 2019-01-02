@@ -1,22 +1,21 @@
 #pragma once
 
-#include "envoy/event/timer.h"
-#include "envoy/runtime/runtime.h"
-
+#include "common/common/logger.h"
 #include "common/common/thread.h"
 #include "common/event/real_time_system.h"
-#include "envoy/event/dispatcher.h"
-
-#include "envoy/stats/store.h"
-#include "exe/client_options_impl.h"
-#include "exe/stream_decoder.h"
-
 // TODO(oschaaf):
 #include "common/runtime/runtime_impl.h"
 #include "common/thread_local/thread_local_impl.h"
 
+#include "envoy/event/dispatcher.h"
+#include "envoy/event/timer.h"
 #include "envoy/http/conn_pool.h"
+#include "envoy/runtime/runtime.h"
+#include "envoy/stats/store.h"
 #include "envoy/upstream/upstream.h"
+
+#include "exe/client_options_impl.h"
+#include "exe/stream_decoder.h"
 
 using namespace Envoy;
 

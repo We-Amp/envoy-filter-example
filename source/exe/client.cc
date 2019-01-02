@@ -25,6 +25,7 @@ ClientMain::ClientMain(OptionsImpl options) : options_(options) {
   ares_library_init(ARES_LIB_INIT_ALL);
   Event::Libevent::Global::initialize();
   configureComponentLogLevels();
+  time_system_ = std::make_unique<Envoy::Event::RealTimeSystem>();
 }
 
 ClientMain::~ClientMain() { ares_library_cleanup(); }
@@ -44,8 +45,8 @@ bool ClientMain::run() {
   auto thread_factory = Thread::ThreadFactoryImplPosix();
   auto api = std::make_unique<Envoy::Api::Impl>(std::chrono::milliseconds(1000) /*flush interval*/,
                                                 thread_factory, *store);
-  auto dispatcher = api->allocateDispatcher(real_time_system_);
-  HttpBenchmarkTimingLoop bml(*dispatcher, *store, real_time_system_, thread_factory);
+  auto dispatcher = api->allocateDispatcher(*time_system_);
+  HttpBenchmarkTimingLoop bml(*dispatcher, *store, *time_system_, thread_factory);
   bml.start();
   bml.waitForCompletion();
   // Benchmarker benchmarker(*dispatcher, options_.connections(), options_.requests_per_second(),
