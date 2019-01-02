@@ -45,11 +45,15 @@ envoy_cc_library(
         "client.cc",
         "stream_decoder.cc",
 	    "client_options_impl.cc",
+	    "ssl.cc",
+        "benchmark_loop.cc",
     ],
     hdrs = [
         "client.h",
         "stream_decoder.h",
     	"client_options_impl.h",
+        "ssl.h",
+        "benchmark_loop.h",
     ],
     repository = "@envoy",
     deps = [

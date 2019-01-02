@@ -22,12 +22,14 @@ public:
   uint64_t requests_per_second() const override { return requests_per_second_; }
   uint64_t connections() const override { return connections_; }
   std::chrono::seconds duration() const override { return std::chrono::seconds(duration_); }
+  std::chrono::seconds timeout() const override { return std::chrono::seconds(timeout_); }
   std::string uri() const override { return uri_; }
 
 private:
   uint64_t requests_per_second_;
   uint64_t connections_;
   uint64_t duration_;
+  uint64_t timeout_;
   std::string uri_;
 };
 

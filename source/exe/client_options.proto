@@ -11,6 +11,8 @@ message ClientCommandLineOptions {
   uint64 connections = 2;
   // See :option:`--duration` for details.
   google.protobuf.Duration duration = 3;
+  // See :option:`--timeout` for details.
+  google.protobuf.Duration timeout = 4;
 
-  string uri = 4;
+  string uri = 5;
 }

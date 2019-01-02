@@ -55,32 +55,7 @@ Benchmarker::Benchmarker(Envoy::Event::Dispatcher& dispatcher, unsigned int conn
   ENVOY_LOG(debug, "uri {} -> is_https [{}] | host [{}] | path [{}] | port [{}]", uri, is_https_,
             host_, path_, port_);
 
-  // TODO(oschaaf): prep up ssl processing.
   if (is_https_) {
-    /*
-      envoy::api::v2::auth::UpstreamTlsContext tls_context;
-      Envoy::Ssl::ContextManagerImpl manager(dispatcher.timeSystem());
-      //Envoy::Server::Configuration::TransportSocketFactoryContextImpl factory_context(manager, );
-      auto client_cfg = std::make_unique<Envoy::Ssl::ClientContextConfigImpl>(tls_context,
-      factory_context); Stats::IsolatedStoreImpl client_stats_store; Ssl::ClientSslSocketFactory
-      client_ssl_socket_factory(std::move(client_cfg), manager, client_stats_store);
-*/
-
-    // Envoy::Server::Configuration::TransportSocketFactoryContextImpl factory_context(
-    //    ssl_context_manager, *scope, cm, local_info, dispatcher, random, stats);
-    // Envoy::Stats::ScopePtr scope = stats.createScope(fmt::format("cluster.{}.", cluster.name()));
-
-    // auto cfg = std::make_unique<Ssl::ClientContextConfigImpl>(tls_context, factory_context_);
-    /*
-
-      mock_cluster_info_->transport_socket_factory_ = std::make_unique<Ssl::ClientSslSocketFactory>(
-          std::move(cfg), context_manager_, *stats_store_);
-      ON_CALL(*mock_cluster_info_, transportSocketFactory())
-          .WillByDefault(ReturnRef(*mock_cluster_info_->transport_socket_factory_));
-      async_client_transport_socket_ =
-          mock_cluster_info_->transport_socket_factory_->createTransportSocket(nullptr);
-      client_ssl_ctx_ = createClientSslTransportSocketFactory({}, context_manager_);
-    */
   }
 }
 
@@ -96,20 +71,6 @@ Nighthawk::Http::CodecClientProd* Benchmarker::setupCodecClients(unsigned int nu
           target_address_, Network::Address::InstanceConstSharedPtr(),
           std::make_unique<Network::RawBufferSocket>(), nullptr);
     } else {
-      /*
-      envoy::api::v2::auth::UpstreamTlsContext tls_context;
-      Ssl::ContextManagerImpl manager(dispatcher_->timeSystem());
-      Stats::IsolatedStoreImpl stats;
-      Stats::ScopePtr scope = stats.createScope("sslclient.");
-      Server::Configuration::TransportSocketFactoryContextImpl factory_context(
-        manager, *scope, cm, local_info, dispatcher, random, stats);
-
-      Ssl::ClientContextConfigImpl cfg(tls_context, factory_context);
-      Ssl::ClientContextSharedPtr ctx(new Ssl::ClientContextImpl(*scope, cfg,
-      dispatcher_->timeSystem())); Network::TransportSocketOptionsSharedPtr
-      transport_socket_options; connection = dispatcher_->createClientConnection( target_address_,
-      Network::Address::InstanceConstSharedPtr(), std::make_unique<Ssl::SslSocket>(ctx,
-      Ssl::InitialState::Client, transport_socket_options), nullptr);*/
     };
 
     // TODO(oschaaf): implement h/2.
