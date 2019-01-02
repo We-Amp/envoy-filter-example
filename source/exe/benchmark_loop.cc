@@ -87,18 +87,21 @@ void BenchmarkLoop::run(bool from_timer) {
   }
 }
 
-HttpBenchmarkTimingLoop::HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispatcher,
-                                                 Envoy::Stats::Store& store,
-                                                 Envoy::TimeSource& time_source,
-                                                 Thread::ThreadFactory& thread_factory,
-                                                 uint64_t rps, std::chrono::seconds duration)
+HttpBenchmarkTimingLoop::HttpBenchmarkTimingLoop(
+    Envoy::Event::Dispatcher& dispatcher, Envoy::Stats::Store& store,
+    Envoy::TimeSource& time_source, Thread::ThreadFactory& thread_factory, uint64_t rps,
+    std::chrono::seconds duration, uint64_t max_connections, std::chrono::seconds timeout)
     : BenchmarkLoop(dispatcher, store, time_source, thread_factory, rps, duration) {
 
   envoy::api::v2::Cluster cluster_config;
   envoy::api::v2::core::BindConfig bind_config;
   envoy::config::bootstrap::v2::Runtime runtime_config;
 
-  cluster_config.mutable_connect_timeout()->set_seconds(3);
+  auto thresholds = cluster_config.mutable_circuit_breakers()->add_thresholds();
+
+  cluster_config.mutable_connect_timeout()->set_seconds(timeout.count());
+  thresholds->mutable_max_connections()->set_value(max_connections);
+
   Envoy::Stats::ScopePtr scope = store_.createScope(fmt::format(
       "cluster.{}.", cluster_config.alt_stat_name().empty() ? cluster_config.name()
                                                             : cluster_config.alt_stat_name()));

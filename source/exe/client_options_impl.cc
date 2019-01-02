@@ -12,6 +12,8 @@ OptionsImpl::OptionsImpl(int argc, const char* const* argv) {
                                         "uint64_t", cmd);
   TCLAP::ValueArg<uint64_t> duration("", "duration", "duration (seconds)", false, 5, "uint64_t",
                                      cmd);
+  TCLAP::ValueArg<uint64_t> timeout("", "timeout", "timeout (seconds)", false, 5, "uint64_t", cmd);
+
   TCLAP::UnlabeledValueArg<std::string> uri("uri", "uri to benchmark", true, "", "uri format", cmd);
 
   cmd.setExceptionHandling(false);
@@ -34,6 +36,7 @@ OptionsImpl::OptionsImpl(int argc, const char* const* argv) {
   requests_per_second_ = requests_per_second.getValue();
   connections_ = connections.getValue();
   duration_ = duration.getValue();
+  timeout_ = timeout.getValue();
   uri_ = uri.getValue();
 }
 

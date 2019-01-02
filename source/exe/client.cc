@@ -47,7 +47,8 @@ bool ClientMain::run() {
                                                 thread_factory, *store);
   auto dispatcher = api->allocateDispatcher(*time_system_);
   HttpBenchmarkTimingLoop bml(*dispatcher, *store, *time_system_, thread_factory,
-                              options_.requests_per_second(), options_.duration());
+                              options_.requests_per_second(), options_.duration(),
+                              options_.connections(), options_.timeout());
   bml.start();
   bml.waitForCompletion();
   // Benchmarker benchmarker(*dispatcher, options_.connections(), options_.requests_per_second(),

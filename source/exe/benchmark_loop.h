@@ -61,6 +61,7 @@ protected:
   Thread::ThreadFactory& thread_factory_;
   std::unique_ptr<Envoy::Runtime::LoaderImpl> runtime_;
   Runtime::RandomGeneratorImpl generator_;
+  // TODO(oschaaf): generalize usage of these and move out to derived class(es)
   uint64_t pool_connect_failures_;
   uint64_t pool_overflow_failures_;
 
@@ -85,7 +86,8 @@ class HttpBenchmarkTimingLoop : public BenchmarkLoop,
 public:
   HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispatcher, Envoy::Stats::Store& store,
                           Envoy::TimeSource& time_source, Thread::ThreadFactory& thread_factory,
-                          uint64_t rps, std::chrono::seconds duration);
+                          uint64_t rps, std::chrono::seconds duration, uint64_t max_connections,
+                          std::chrono::seconds timeout);
   virtual bool tryStartOne(std::function<void()> completion_callback) override;
 
   // ConnectionPool::Callbacks
