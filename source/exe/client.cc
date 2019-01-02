@@ -143,10 +143,10 @@ public:
 // TODO(oschaaf): make a concrete implementation out of this one.
 class MClientContextConfigImpl : public Ssl::ClientContextConfig {
 public:
-  MClientContextConfigImpl() {}
+  MClientContextConfigImpl() : alpn_("h2,http/1.1") {}
   virtual ~MClientContextConfigImpl() {}
 
-  virtual const std::string& alpnProtocols() const { return foo_; };
+  virtual const std::string& alpnProtocols() const { return alpn_; };
 
   virtual const std::string& cipherSuites() const { return DEFAULT_CIPHER_SUITES; };
 
@@ -184,6 +184,7 @@ public:
 
 private:
   std::string foo_;
+  std::string alpn_;
   std::function<void()> callback_;
   std::vector<Ssl::TlsCertificateConfigImpl> tls_certificate_configs_;
   Ssl::CertificateValidationContextConfigPtr validation_context_config_;
@@ -279,19 +280,22 @@ HttpBenchmarkTimingLoop::HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispa
       std::make_shared<Network::ConnectionSocket::Options>();
 
   auto host = std::shared_ptr<Upstream::Host>{new Upstream::HostImpl(
-      cluster, "", Network::Utility::resolveUrl("tcp://192.168.2.232:443"),
+      cluster, "", Network::Utility::resolveUrl("tcp://127.0.0.1:443"),
       envoy::api::v2::core::Metadata::default_instance(), 1 /* weight */,
       envoy::api::v2::core::Locality(),
       envoy::api::v2::endpoint::Endpoint::HealthCheckConfig::default_instance(), 0)};
 
-  pool_ = std::make_unique<Envoy::Http::Http1::ConnPoolImplProd>(
+  h1_pool_ = std::make_unique<Envoy::Http::Http1::ConnPoolImplProd>(
+      dispatcher, host, Upstream::ResourcePriority::Default, options);
+
+  h2_pool_ = std::make_unique<Envoy::Http::Http2::ProdConnPoolImpl>(
       dispatcher, host, Upstream::ResourcePriority::Default, options);
 }
 
 bool HttpBenchmarkTimingLoop::tryStartOne(std::function<void()> completion_callback) {
   auto stream_decoder = new Nighthawk::Http::StreamDecoder(
       [completion_callback]() -> void { completion_callback(); });
-  auto cancellable = pool_->newStream(*stream_decoder, *this);
+  auto cancellable = h2_pool_->newStream(*stream_decoder, *this);
   (void)cancellable;
   return true;
 }
@@ -320,7 +324,7 @@ void HttpBenchmarkTimingLoop::onPoolReady(Envoy::Http::StreamEncoder& encoder,
   // TODO(oschaaf): hard coded path and host
   headers.insertPath().value(std::string("/"));
   headers.insertHost().value(std::string("127.0.0.1"));
-  headers.insertScheme().value(Headers::get().SchemeValues.Http);
+  headers.insertScheme().value(Headers::get().SchemeValues.Https);
   encoder.encodeHeaders(headers, true);
 }
 

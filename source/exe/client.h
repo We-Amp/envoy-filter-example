@@ -16,6 +16,7 @@
 #include "common/thread_local/thread_local_impl.h"
 
 #include "common/http/http1/conn_pool.h"
+#include "common/http/http2/conn_pool.h"
 #include "envoy/upstream/upstream.h"
 
 using namespace Envoy;
@@ -110,7 +111,8 @@ public:
                    Envoy::Upstream::HostDescriptionConstSharedPtr host) override;
 
 private:
-  std::unique_ptr<Envoy::Http::Http1::ConnPoolImpl> pool_;
+  std::unique_ptr<Envoy::Http::Http1::ConnPoolImpl> h1_pool_;
+  std::unique_ptr<Envoy::Http::Http2::ConnPoolImpl> h2_pool_;
 };
 
 } // namespace Nighthawk
