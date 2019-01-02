@@ -48,7 +48,8 @@ bool ClientMain::run() {
   auto dispatcher = api->allocateDispatcher(*time_system_);
   HttpBenchmarkTimingLoop bml(*dispatcher, *store, *time_system_, thread_factory,
                               options_.requests_per_second(), options_.duration(),
-                              options_.connections(), options_.timeout(), options_.uri());
+                              options_.connections(), options_.timeout(), options_.uri(),
+                              options_.h2());
   if (bml.start()) {
     bml.waitForCompletion();
     // TODO(oschaaf): should return false on runs failing on

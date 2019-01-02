@@ -20,6 +20,7 @@ public:
   virtual std::chrono::seconds duration() const PURE;
   virtual std::chrono::seconds timeout() const PURE;
   virtual std::string uri() const PURE;
+  virtual bool h2() const PURE;
 
   virtual ClientCommandLineOptionsPtr toClientCommandLineOptions() const PURE;
 };

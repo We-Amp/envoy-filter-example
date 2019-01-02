@@ -13,6 +13,8 @@ message ClientCommandLineOptions {
   google.protobuf.Duration duration = 3;
   // See :option:`--timeout` for details.
   google.protobuf.Duration timeout = 4;
+  // See :option:`--h2` for details.
+  bool h2 = 5;
 
-  string uri = 5;
+  string uri = 6;
 }

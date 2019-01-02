@@ -14,6 +14,8 @@ OptionsImpl::OptionsImpl(int argc, const char* const* argv) {
                                      cmd);
   TCLAP::ValueArg<uint64_t> timeout("", "timeout", "timeout (seconds)", false, 5, "uint64_t", cmd);
 
+  TCLAP::SwitchArg h2("", "h2", "Use h2", cmd);
+
   TCLAP::UnlabeledValueArg<std::string> uri("uri", "uri to benchmark", true, "", "uri format", cmd);
 
   cmd.setExceptionHandling(false);
@@ -38,6 +40,7 @@ OptionsImpl::OptionsImpl(int argc, const char* const* argv) {
   duration_ = duration.getValue();
   timeout_ = timeout.getValue();
   uri_ = uri.getValue();
+  h2_ = h2.getValue();
 }
 
 Nighthawk::ClientCommandLineOptionsPtr OptionsImpl::toClientCommandLineOptions() const {
@@ -47,6 +50,8 @@ Nighthawk::ClientCommandLineOptionsPtr OptionsImpl::toClientCommandLineOptions()
   command_line_options->set_connections(connections());
   command_line_options->mutable_duration()->set_seconds(duration().count());
   command_line_options->set_requests_per_second(requests_per_second());
+  command_line_options->mutable_duration()->set_seconds(timeout().count());
+  command_line_options->set_h2(h2());
   command_line_options->set_uri(uri());
 
   return command_line_options;

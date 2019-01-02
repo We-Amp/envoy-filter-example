@@ -55,9 +55,6 @@ BenchmarkLoop::BenchmarkLoop(Envoy::Event::Dispatcher& dispatcher, Envoy::Stats:
     port_ = Network::Utility::portFromTcpUrl(tcp_url);
     host_ = host_.substr(0, colon_index);
   }
-
-  ENVOY_LOG(info, "uri {} -> is_https [{}] | host [{}] | path [{}] | port [{}]", uri, is_https_,
-            host_, path_, port_);
 }
 
 BenchmarkLoop::~BenchmarkLoop() {
@@ -111,10 +108,9 @@ void BenchmarkLoop::run(bool from_timer) {
   current_rps_ = requests_ / (ms_dur / 1000.0);
   int due_requests = ((rps_ - current_rps_)) * (ms_dur / 1000.0);
 
-  if (dur >= duration_) {
+  if (dur >= duration_ && callback_count_ >= max_requests_) {
     ENVOY_LOG(info, "requested: {} completed:{} rps: {}", requests_, callback_count_, current_rps_);
     ENVOY_LOG(info, "{} ms benmark run completed.", ms_dur);
-
     dispatcher_.exit();
     return;
   } else if (pool_connect_failures_ >= 1) { // TODO(oschaaf): config
@@ -134,6 +130,16 @@ void BenchmarkLoop::run(bool from_timer) {
     bool started = tryStartOne([this, now]() {
       auto nanoseconds = std::chrono::high_resolution_clock::now() - now;
       ASSERT(nanoseconds.count() > 0);
+      if (callback_count_++ >= max_requests_) {
+        /*auto dur = now - start_;
+        double ms_dur =
+            std::chrono::duration_cast<std::chrono::nanoseconds>(dur).count() / 1000000.0;
+        ENVOY_LOG(info, "requested: {} completed:{} rps: {}", requests_, callback_count_,
+                  current_rps_);
+        ENVOY_LOG(info, "{} ms benmark run completed.", ms_dur);
+        dispatcher_.exit();
+        return;*/
+      }
       // results_.push_back(nanoseconds.count());
       timer_->enableTimer(std::chrono::milliseconds(0));
     });
@@ -151,15 +157,16 @@ void BenchmarkLoop::run(bool from_timer) {
   }
 }
 
-HttpBenchmarkTimingLoop::HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispatcher,
-                                                 Envoy::Stats::Store& store,
-                                                 Envoy::TimeSource& time_source,
-                                                 Thread::ThreadFactory& thread_factory,
-                                                 uint64_t rps, std::chrono::seconds duration,
-                                                 uint64_t max_connections,
-                                                 std::chrono::seconds timeout, std::string uri)
+HttpBenchmarkTimingLoop::HttpBenchmarkTimingLoop(
+    Envoy::Event::Dispatcher& dispatcher, Envoy::Stats::Store& store,
+    Envoy::TimeSource& time_source, Thread::ThreadFactory& thread_factory, uint64_t rps,
+    std::chrono::seconds duration, uint64_t max_connections, std::chrono::seconds timeout,
+    std::string uri, bool h2)
     : BenchmarkLoop(dispatcher, store, time_source, thread_factory, rps, duration, uri),
-      timeout_(timeout), max_connections_(max_connections) {}
+      timeout_(timeout), max_connections_(max_connections), h2_(h2) {
+  ENVOY_LOG(info, "uri {} -> h2[{}] | is_https [{}] | host [{}] | path [{}] | port [{}]", uri, h2_,
+            is_https_, host_, path_, port_);
+}
 
 bool HttpBenchmarkTimingLoop::tryStartOne(std::function<void()> completion_callback) {
   auto stream_decoder = new Nighthawk::Http::StreamDecoder(
@@ -207,9 +214,7 @@ void HttpBenchmarkTimingLoop::initialize() {
       1 /* weight */, envoy::api::v2::core::Locality(),
       envoy::api::v2::endpoint::Endpoint::HealthCheckConfig::default_instance(), 0)};
 
-  // TODO(oschaaf): For now we assume h/2 support is available when
-  // using secure transport. This doesn't make sense though, revisit later.
-  if (is_https_) {
+  if (h2_) {
     pool_ = std::make_unique<Envoy::Http::Http2::ProdConnPoolImpl>(
         dispatcher_, host, Upstream::ResourcePriority::Default, options);
   } else {
@@ -241,9 +246,10 @@ void HttpBenchmarkTimingLoop::onPoolReady(Envoy::Http::StreamEncoder& encoder,
   HeaderMapImpl headers;
   headers.insertMethod().value(Headers::get().MethodValues.Get);
   // TODO(oschaaf): hard coded path and host
-  headers.insertPath().value(std::string("/"));
-  headers.insertHost().value(std::string("127.0.0.1"));
-  headers.insertScheme().value(Headers::get().SchemeValues.Https);
+  headers.insertPath().value(std::string(path_));
+  headers.insertHost().value(std::string(host_));
+  headers.insertScheme().value(is_https_ ? Headers::get().SchemeValues.Https
+                                         : Headers::get().SchemeValues.Http);
   encoder.encodeHeaders(headers, true);
 }
 

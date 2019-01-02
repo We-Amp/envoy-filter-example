@@ -21,7 +21,7 @@ using namespace Envoy;
 
 namespace Nighthawk {
 
-class BenchmarkLoop : Envoy::Logger::Loggable<Envoy::Logger::Id::main> {
+class BenchmarkLoop : public Envoy::Logger::Loggable<Envoy::Logger::Id::main> {
 public:
   BenchmarkLoop(Envoy::Event::Dispatcher& dispatcher, Envoy::Stats::Store& store,
                 Envoy::TimeSource& time_source, Thread::ThreadFactory& thread_factory, uint64_t rps,
@@ -89,7 +89,7 @@ public:
   HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispatcher, Envoy::Stats::Store& store,
                           Envoy::TimeSource& time_source, Thread::ThreadFactory& thread_factory,
                           uint64_t rps, std::chrono::seconds duration, uint64_t max_connections,
-                          std::chrono::seconds timeout, std::string uri);
+                          std::chrono::seconds timeout, std::string uri, bool h2);
   virtual bool tryStartOne(std::function<void()> completion_callback) override;
 
   // ConnectionPool::Callbacks
@@ -103,6 +103,7 @@ private:
 
   std::chrono::seconds timeout_;
   uint64_t max_connections_;
+  bool h2_;
   Envoy::Http::ConnectionPool::InstancePtr pool_;
 };
 

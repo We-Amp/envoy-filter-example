@@ -28,6 +28,30 @@
             }
         },
         {
+            "label": "opt-build",
+            "type": "shell",
+            "command": "PATH=/usr/lib/llvm-7/bin:$PATH CC=clang CXX=clang++ bazel build -c opt //:nighthawk_client",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "opt-build-test",
+            "type": "shell",
+            "command": "PATH=/usr/lib/llvm-7/bin:$PATH CC=clang CXX=clang++ bazel build -c opt //test:nighthawk_test",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
             "label": "build",
             "type": "shell",
             "command": "PATH=/usr/lib/llvm-7/bin:$PATH CC=clang CXX=clang++ bazel build -c fastbuild //:nighthawk_client",
