@@ -46,7 +46,8 @@ bool ClientMain::run() {
   auto api = std::make_unique<Envoy::Api::Impl>(std::chrono::milliseconds(1000) /*flush interval*/,
                                                 thread_factory, *store);
   auto dispatcher = api->allocateDispatcher(*time_system_);
-  HttpBenchmarkTimingLoop bml(*dispatcher, *store, *time_system_, thread_factory);
+  HttpBenchmarkTimingLoop bml(*dispatcher, *store, *time_system_, thread_factory,
+                              options_.requests_per_second(), options_.duration());
   bml.start();
   bml.waitForCompletion();
   // Benchmarker benchmarker(*dispatcher, options_.connections(), options_.requests_per_second(),

@@ -90,8 +90,9 @@ void BenchmarkLoop::run(bool from_timer) {
 HttpBenchmarkTimingLoop::HttpBenchmarkTimingLoop(Envoy::Event::Dispatcher& dispatcher,
                                                  Envoy::Stats::Store& store,
                                                  Envoy::TimeSource& time_source,
-                                                 Thread::ThreadFactory& thread_factory)
-    : BenchmarkLoop(dispatcher, store, time_source, thread_factory) {
+                                                 Thread::ThreadFactory& thread_factory,
+                                                 uint64_t rps, std::chrono::seconds duration)
+    : BenchmarkLoop(dispatcher, store, time_source, thread_factory, rps, duration) {
 
   envoy::api::v2::Cluster cluster_config;
   envoy::api::v2::core::BindConfig bind_config;
