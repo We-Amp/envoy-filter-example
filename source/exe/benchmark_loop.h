@@ -80,7 +80,7 @@ private:
   uint64_t max_requests_;
   uint64_t callback_count_;
   std::string uri_;
-  std::string method_;
+  std::vector<int> results_;
 };
 
 class HttpBenchmarkTimingLoop : public BenchmarkLoop,

@@ -1,6 +1,7 @@
 #include "exe/benchmark_loop.h"
 
 #include <chrono>
+#include <fstream>
 #include <iostream>
 #include <memory>
 
@@ -38,6 +39,9 @@ BenchmarkLoop::BenchmarkLoop(Envoy::Event::Dispatcher& dispatcher, Envoy::Stats:
       is_https_(false), host_(""), port_(0), path_("/"), rps_(rps), current_rps_(0),
       duration_(duration), requests_(0), max_requests_(rps_ * duration_.count()),
       callback_count_(0), uri_(uri) {
+
+  results_.reserve(duration.count() * rps);
+
   // parse incoming uri into fields that we need.
   // TODO(oschaaf): refactor. also input validation, etc.
   absl::string_view host, path;
@@ -58,6 +62,21 @@ BenchmarkLoop::BenchmarkLoop(Envoy::Event::Dispatcher& dispatcher, Envoy::Stats:
 }
 
 BenchmarkLoop::~BenchmarkLoop() {
+  // TODO(oschaaf): we should only do this on request.
+  // TODO(oschaaf): we should not do this in this destructor.
+  std::ofstream myfile;
+  myfile.open("res.txt");
+  for (int r : results_) {
+    myfile << (r / 1000) << "\n";
+  }
+  myfile.close();
+
+  double average = std::accumulate(results_.begin(), results_.end(), 0.0) / results_.size();
+  auto minmax = std::minmax_element(results_.begin(), results_.end());
+  ENVOY_LOG(info, "avg latency {} us over {} callbacks", (average / 1000), results_.size());
+  ENVOY_LOG(info, "min / max latency: {} / {}", (*(minmax.first) / 1000),
+            (*(minmax.second) / 1000));
+
   // TODO(oschaaf): check
   tls_->shutdownGlobalThreading();
 }
@@ -130,17 +149,8 @@ void BenchmarkLoop::run(bool from_timer) {
     bool started = tryStartOne([this, now]() {
       auto nanoseconds = std::chrono::high_resolution_clock::now() - now;
       ASSERT(nanoseconds.count() > 0);
-      if (callback_count_++ >= max_requests_) {
-        /*auto dur = now - start_;
-        double ms_dur =
-            std::chrono::duration_cast<std::chrono::nanoseconds>(dur).count() / 1000000.0;
-        ENVOY_LOG(info, "requested: {} completed:{} rps: {}", requests_, callback_count_,
-                  current_rps_);
-        ENVOY_LOG(info, "{} ms benmark run completed.", ms_dur);
-        dispatcher_.exit();
-        return;*/
-      }
-      // results_.push_back(nanoseconds.count());
+      callback_count_++;
+      results_.push_back(nanoseconds.count());
       timer_->enableTimer(std::chrono::milliseconds(0));
     });
 
