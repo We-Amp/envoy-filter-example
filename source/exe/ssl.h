@@ -1,4 +1,6 @@
 
+#pragma once
+
 #include "server/transport_socket_config_impl.h"
 
 #include "common/ssl/context_config_impl.h"
