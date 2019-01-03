@@ -211,8 +211,8 @@ void HttpBenchmarkTimingLoop::initialize() {
 
   Network::TransportSocketFactoryPtr socket_factory;
   if (is_https_) {
-    socket_factory =
-        Network::TransportSocketFactoryPtr{new Ssl::MClientSslSocketFactory(store_, time_source_)};
+    socket_factory = Network::TransportSocketFactoryPtr{
+        new Ssl::MClientSslSocketFactory(store_, time_source_, h2_)};
   } else {
     socket_factory = std::make_unique<Network::RawBufferSocketFactory>();
   };
