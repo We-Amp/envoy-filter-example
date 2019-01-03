@@ -10,7 +10,7 @@
 
 namespace Nighthawk {
 
-class ClientMain {
+class ClientMain : public Envoy::Logger::Loggable<Envoy::Logger::Id::main> {
 public:
   ClientMain(int argc, const char* const* argv);
   ClientMain(OptionsImpl options);
