@@ -109,6 +109,9 @@ bool BenchmarkLoop::start() {
     return false;
   }
 
+  tryStartOne([this]() { dispatcher_.exit(); });
+  dispatcher_.run(Envoy::Event::Dispatcher::RunType::Block);
+
   start_ = std::chrono::high_resolution_clock::now();
   run(false);
   scheduleRun();
