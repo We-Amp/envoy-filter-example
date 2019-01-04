@@ -90,7 +90,7 @@
         {
             "label": "direct-run-test",
             "type": "shell",
-            "dependsOn": "build-test",
+            "dependsOn": "debug-build-test",
             "presentation": {
                 "echo": true,
                 "reveal": "always",
@@ -107,6 +107,31 @@
                 }
             },
             "command": "bazel-bin/test/nighthawk_test",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "direct-run-test-with-gdb",
+            "type": "shell",
+            "dependsOn": "debug-build-test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "options": {
+                "env": {
+                    "TEST_WORKSPACE": ".",
+                    "TEST_SRCDIR": "${workspaceRoot}",
+                    "ENVOY_IP_TEST_VERSIONS": "v4only"
+                }
+            },
+            "command": "gdb --args bazel-bin/test/nighthawk_test",
             "group": {
                 "kind": "test",
                 "isDefault": true
