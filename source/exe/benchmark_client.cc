@@ -23,6 +23,7 @@
 #include "common/http/http2/conn_pool.h"
 
 #include "exe/ssl.h"
+#include "exe/stream_decoder.h"
 
 namespace Nighthawk {
 
@@ -32,7 +33,9 @@ BenchmarkHttpClient::BenchmarkHttpClient(Envoy::Event::Dispatcher& dispatcher,
                                          Envoy::Http::HeaderMapImplPtr&& request_headers,
                                          bool use_h2)
     : dispatcher_(dispatcher), store_(store), time_source_(time_source),
-      request_headers_(std::move(request_headers)), use_h2_(use_h2) {
+      request_headers_(std::move(request_headers)), use_h2_(use_h2), is_https_(false), host_(""),
+      port_(0), path_("/"), dns_failure_(true), timeout_(5), max_connections_(1),
+      pool_connect_failures_(0), pool_overflow_failures_(0) {
 
   // parse incoming uri into fields that we need.
   // TODO(oschaaf): refactor. also input validation, etc.
@@ -53,7 +56,9 @@ BenchmarkHttpClient::BenchmarkHttpClient(Envoy::Event::Dispatcher& dispatcher,
   }
 }
 
-void BenchmarkHttpClient::initialize() {
+BenchmarkHttpClient::~BenchmarkHttpClient() {}
+
+void BenchmarkHttpClient::initialize(Envoy::Runtime::LoaderImpl& runtime) {
   // TODO(oschaaf): ipv6, refactor dns stuff into separate call
   auto dns_resolver = dispatcher_.createDnsResolver({});
   Network::ActiveDnsQuery* active_dns_query_ = dns_resolver->resolve(
@@ -76,7 +81,7 @@ void BenchmarkHttpClient::initialize() {
 
   envoy::api::v2::Cluster cluster_config;
   envoy::api::v2::core::BindConfig bind_config;
-  envoy::config::bootstrap::v2::Runtime runtime_config;
+  // envoy::config::bootstrap::v2::Runtime runtime_config;
 
   auto thresholds = cluster_config.mutable_circuit_breakers()->add_thresholds();
 
@@ -86,8 +91,6 @@ void BenchmarkHttpClient::initialize() {
   Envoy::Stats::ScopePtr scope = store_.createScope(fmt::format(
       "cluster.{}.", cluster_config.alt_stat_name().empty() ? cluster_config.name()
                                                             : cluster_config.alt_stat_name()));
-  tls_ = std::make_unique<ThreadLocal::InstanceImpl>();
-  runtime_ = std::make_unique<Envoy::Runtime::LoaderImpl>(generator_, store_, *tls_);
 
   Network::TransportSocketFactoryPtr socket_factory;
   if (is_https_) {
@@ -98,7 +101,7 @@ void BenchmarkHttpClient::initialize() {
   };
 
   Envoy::Upstream::ClusterInfoConstSharedPtr cluster = std::make_unique<Upstream::ClusterInfoImpl>(
-      cluster_config, bind_config, *runtime_, std::move(socket_factory), std::move(scope),
+      cluster_config, bind_config, runtime, std::move(socket_factory), std::move(scope),
       false /*added_via_api*/);
 
   Network::ConnectionSocket::OptionsSharedPtr options =
@@ -118,11 +121,21 @@ void BenchmarkHttpClient::initialize() {
   }
 
   // TODO(oschaaf): refactor the setup of the request header
+  /*
   request_headers_->insertMethod().value(Envoy::Http::Headers::get().MethodValues.Get);
   request_headers_->insertPath().value(std::string(path_));
   request_headers_->insertHost().value(std::string(host_));
   request_headers_->insertScheme().value(is_https_ ? Envoy::Http::Headers::get().SchemeValues.Https
                                                    : Envoy::Http::Headers::get().SchemeValues.Http);
+                                                   */
+}
+
+bool BenchmarkHttpClient::tryStartOne(std::function<void()> completion_callback) {
+  auto stream_decoder = new Nighthawk::Http::StreamDecoder(
+      [completion_callback]() -> void { completion_callback(); });
+  auto cancellable = pool_->newStream(*stream_decoder, *this);
+  (void)cancellable;
+  return true;
 }
 
 void BenchmarkHttpClient::onPoolFailure(Envoy::Http::ConnectionPool::PoolFailureReason reason,

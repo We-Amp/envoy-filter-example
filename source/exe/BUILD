@@ -56,6 +56,7 @@ envoy_cc_library(
         "benchmark_loop.h",
         "benchmark_client.h",
     ],
+    visibility = ["//visibility:public"],
     repository = "@envoy",
     deps = [
         ":benchmark_options_cc",

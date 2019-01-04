@@ -25,8 +25,10 @@ public:
   BenchmarkHttpClient(Envoy::Event::Dispatcher& dispatcher, Envoy::Stats::Store& store,
                       Envoy::TimeSource& time_source, std::string uri,
                       Envoy::Http::HeaderMapImplPtr&& request_headers, bool use_h2);
+  ~BenchmarkHttpClient();
 
-  void initialize();
+  void initialize(Envoy::Runtime::LoaderImpl& runtime);
+  bool tryStartOne(std::function<void()> completion_callback);
 
   // ConnectionPool::Callbacks
   void onPoolFailure(Envoy::Http::ConnectionPool::PoolFailureReason reason,
@@ -41,9 +43,6 @@ private:
 
   Envoy::Http::HeaderMapImplPtr request_headers_;
 
-  uint64_t pool_connect_failures_;
-  uint64_t pool_overflow_failures_;
-
   bool use_h2_;
   bool is_https_;
   std::string host_;
@@ -55,20 +54,14 @@ private:
   std::chrono::seconds timeout_;
   uint64_t max_connections_;
   bool h2_;
+
+  uint64_t pool_connect_failures_;
+  uint64_t pool_overflow_failures_;
+
   Envoy::Http::ConnectionPool::InstancePtr pool_;
 
   Envoy::Event::TimerPtr timer_;
-  std::unique_ptr<Envoy::ThreadLocal::InstanceImpl> tls_;
-  std::unique_ptr<Envoy::Runtime::LoaderImpl> runtime_;
   Envoy::Runtime::RandomGeneratorImpl generator_;
-  /*
-    std::chrono::seconds timeout_;
-    uint64_t max_connections_;
-    Envoy::Http::ConnectionPool::InstancePtr pool_;
-
-    bool dns_failure_;
-    Envoy::Network::Address::InstanceConstSharedPtr target_address_;
-  */
 };
 
 } // namespace Nighthawk
