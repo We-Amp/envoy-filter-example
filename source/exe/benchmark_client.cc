@@ -3,12 +3,36 @@
 #include "common/http/utility.h"
 #include "common/network/utility.h"
 
+#include "ares.h"
+
+#include "absl/strings/str_split.h"
+
+#include "common/api/api_impl.h"
+#include "common/common/compiler_requirements.h"
+#include "common/event/dispatcher_impl.h"
+#include "common/http/header_map_impl.h"
+#include "common/http/headers.h"
+#include "common/network/raw_buffer_socket.h"
+#include "common/network/utility.h"
+
+#include "common/runtime/runtime_impl.h"
+#include "common/thread_local/thread_local_impl.h"
+#include "common/upstream/cluster_manager_impl.h"
+
+#include "common/http/http1/conn_pool.h"
+#include "common/http/http2/conn_pool.h"
+
+#include "exe/ssl.h"
+
 namespace Nighthawk {
 
-BenchmarkHttpClient::BenchmarkHttpClient(std::string uri,
+BenchmarkHttpClient::BenchmarkHttpClient(Envoy::Event::Dispatcher& dispatcher,
+                                         Envoy::Stats::Store& store, Envoy::TimeSource& time_source,
+                                         std::string uri,
                                          Envoy::Http::HeaderMapImplPtr&& request_headers,
                                          bool use_h2)
-    : request_headers_(std::move(request_headers)), use_h2_(use_h2) {
+    : dispatcher_(dispatcher), store_(store), time_source_(time_source),
+      request_headers_(std::move(request_headers)), use_h2_(use_h2) {
 
   // parse incoming uri into fields that we need.
   // TODO(oschaaf): refactor. also input validation, etc.
@@ -27,6 +51,78 @@ BenchmarkHttpClient::BenchmarkHttpClient(std::string uri,
     port_ = Envoy::Network::Utility::portFromTcpUrl(tcp_url);
     host_ = host_.substr(0, colon_index);
   }
+}
+
+void BenchmarkHttpClient::initialize() {
+  // TODO(oschaaf): ipv6, refactor dns stuff into separate call
+  auto dns_resolver = dispatcher_.createDnsResolver({});
+  Network::ActiveDnsQuery* active_dns_query_ = dns_resolver->resolve(
+      host_, Network::DnsLookupFamily::V4Only,
+      [this, &active_dns_query_](
+          const std::list<Network::Address::InstanceConstSharedPtr>&& address_list) -> void {
+        active_dns_query_ = nullptr;
+        ENVOY_LOG(debug, "DNS resolution complete for {} ({} entries).", this->host_,
+                  address_list.size());
+        if (!address_list.empty()) {
+          dns_failure_ = false;
+          target_address_ = Network::Utility::getAddressWithPort(*address_list.front(), port_);
+        } else {
+          ENVOY_LOG(critical, "Could not resolve host [{}]", host_);
+        }
+        dispatcher_.exit();
+      });
+  // Wait for DNS resolution to complete before proceeding.
+  dispatcher_.run(Envoy::Event::Dispatcher::RunType::Block);
+
+  envoy::api::v2::Cluster cluster_config;
+  envoy::api::v2::core::BindConfig bind_config;
+  envoy::config::bootstrap::v2::Runtime runtime_config;
+
+  auto thresholds = cluster_config.mutable_circuit_breakers()->add_thresholds();
+
+  cluster_config.mutable_connect_timeout()->set_seconds(timeout_.count());
+  thresholds->mutable_max_connections()->set_value(max_connections_);
+
+  Envoy::Stats::ScopePtr scope = store_.createScope(fmt::format(
+      "cluster.{}.", cluster_config.alt_stat_name().empty() ? cluster_config.name()
+                                                            : cluster_config.alt_stat_name()));
+  tls_ = std::make_unique<ThreadLocal::InstanceImpl>();
+  runtime_ = std::make_unique<Envoy::Runtime::LoaderImpl>(generator_, store_, *tls_);
+
+  Network::TransportSocketFactoryPtr socket_factory;
+  if (is_https_) {
+    socket_factory = Network::TransportSocketFactoryPtr{
+        new Ssl::MClientSslSocketFactory(store_, time_source_, h2_)};
+  } else {
+    socket_factory = std::make_unique<Network::RawBufferSocketFactory>();
+  };
+
+  Envoy::Upstream::ClusterInfoConstSharedPtr cluster = std::make_unique<Upstream::ClusterInfoImpl>(
+      cluster_config, bind_config, *runtime_, std::move(socket_factory), std::move(scope),
+      false /*added_via_api*/);
+
+  Network::ConnectionSocket::OptionsSharedPtr options =
+      std::make_shared<Network::ConnectionSocket::Options>();
+
+  auto host = std::shared_ptr<Upstream::Host>{new Upstream::HostImpl(
+      cluster, host_, target_address_, envoy::api::v2::core::Metadata::default_instance(),
+      1 /* weight */, envoy::api::v2::core::Locality(),
+      envoy::api::v2::endpoint::Endpoint::HealthCheckConfig::default_instance(), 0)};
+
+  if (use_h2_) {
+    pool_ = std::make_unique<Envoy::Http::Http2::ProdConnPoolImpl>(
+        dispatcher_, host, Upstream::ResourcePriority::Default, options);
+  } else {
+    pool_ = std::make_unique<Envoy::Http::Http1::ConnPoolImplProd>(
+        dispatcher_, host, Upstream::ResourcePriority::Default, options);
+  }
+
+  // TODO(oschaaf): refactor the setup of the request header
+  request_headers_->insertMethod().value(Envoy::Http::Headers::get().MethodValues.Get);
+  request_headers_->insertPath().value(std::string(path_));
+  request_headers_->insertHost().value(std::string(host_));
+  request_headers_->insertScheme().value(is_https_ ? Envoy::Http::Headers::get().SchemeValues.Https
+                                                   : Envoy::Http::Headers::get().SchemeValues.Http);
 }
 
 void BenchmarkHttpClient::onPoolFailure(Envoy::Http::ConnectionPool::PoolFailureReason reason,
