@@ -23,7 +23,10 @@ void Sequencer::scheduleRun() { timer_->enableTimer(std::chrono::milliseconds(1)
 void Sequencer::run(bool from_timer) {
   auto now = std::chrono::high_resolution_clock::now();
   if ((now - start_) > duration_) {
+    ENVOY_LOG(error, "Sequencer done. Initiated: {} / Completed: {}", targets_initiated_,
+              targets_completed_);
     dispatcher_.exit();
+    return;
   }
 
   while (rate_limiter_.tryAcquireOne()) {
