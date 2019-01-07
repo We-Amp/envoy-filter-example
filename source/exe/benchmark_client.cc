@@ -133,6 +133,8 @@ bool BenchmarkHttpClient::tryStartOne(std::function<void()> completion_callback)
       [completion_callback]() -> void { completion_callback(); });
   auto cancellable = pool_->newStream(*stream_decoder, *this);
   (void)cancellable;
+  // TODO(oschaaf): double check this API. The happy flow works, but we probaly
+  // need work here.
   return true;
 }
 

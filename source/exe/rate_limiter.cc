@@ -9,7 +9,7 @@ bool RateLimiter::tryAcquireOne() {
     return true;
   }
   return false;
-} // namespace NighthawkboolRateLimiter::tryAcquireOne()
+}
 
 void LinearRateLimiter::recoverSlots() {
   auto elapsed_since_start = std::chrono::high_resolution_clock::now() - started_at_;

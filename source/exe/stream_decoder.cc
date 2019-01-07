@@ -29,12 +29,14 @@ void StreamDecoder::decodeTrailers(Envoy::Http::HeaderMapPtr&&) { NOT_IMPLEMENTE
 
 void StreamDecoder::onComplete() {
   ASSERT(complete_);
+  // TODO(oschaaf): Handle error responses. We need to communicate at least success or not to
+  // clients. Maybe pass in ourselves to the callback?
   on_complete_cb_();
   delete this;
 }
 
 void StreamDecoder::onResetStream(Envoy::Http::StreamResetReason) {
-  // TODO(oschaaf): handle stream resets.
+  // TODO(oschaaf): handle this.
   // ADD_FAILURE();
   delete this;
 }
