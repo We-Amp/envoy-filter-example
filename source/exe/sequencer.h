@@ -21,6 +21,9 @@ public:
             RateLimiter& rate_limiter, SequencerTarget& target, std::chrono::seconds duration);
   void start();
   void waitForCompletion();
+  void set_latency_callback(std::function<void(std::chrono::nanoseconds)> latency_callback) {
+    latency_callback_ = latency_callback;
+  }
 
 protected:
   void run(bool from_timer);
@@ -37,6 +40,7 @@ private:
   std::chrono::time_point<std::chrono::high_resolution_clock> start_;
   uint64_t targets_initiated_;
   uint64_t targets_completed_;
+  std::function<void(const std::chrono::nanoseconds)> latency_callback_;
 };
 
 } // namespace Nighthawk

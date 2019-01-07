@@ -40,26 +40,20 @@ private:
   Envoy::Event::Dispatcher& dispatcher_;
   Envoy::Stats::Store& store_;
   Envoy::TimeSource& time_source_;
-
   Envoy::Http::HeaderMapImplPtr request_headers_;
-
   bool use_h2_;
+
   bool is_https_;
   std::string host_;
   uint32_t port_;
   std::string path_;
-
   bool dns_failure_;
   Envoy::Network::Address::InstanceConstSharedPtr target_address_;
   std::chrono::seconds timeout_;
   uint64_t max_connections_;
-  bool h2_;
-
   uint64_t pool_connect_failures_;
   uint64_t pool_overflow_failures_;
-
   Envoy::Http::ConnectionPool::InstancePtr pool_;
-
   Envoy::Event::TimerPtr timer_;
   Envoy::Runtime::RandomGeneratorImpl generator_;
 };

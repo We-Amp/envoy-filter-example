@@ -1,6 +1,7 @@
 #include "exe/client.h"
 
 #include <chrono>
+#include <fstream>
 #include <iostream>
 #include <memory>
 
@@ -80,12 +81,31 @@ bool ClientMain::run() {
     ENVOY_LOG(warn, "Failed to determine the number of cpus with affinity to our thread.");
     concurrency = std::thread::hardware_concurrency();
   }
-  ENVOY_LOG(info, "CPUs with affinity: {}. Running {} event loops", concurrency, concurrency);
-
   // We're going to fire up #concurrency benchmark loops and wait for them to complete.
   std::vector<Thread::ThreadPtr> threads;
+  std::vector<std::vector<uint64_t>> global_results;
+  // TODO(oschaaf): rework this. We pre-allocate the global results vector
+  // to avoid reallocations which would crash us.
+  // Wire up a proper stats sink.
+  global_results.reserve(concurrency);
+
+  // TODO(oschaaf): as we spread the tasks accross workers, numbers may not always align
+  // well. We may want to warn about that, or fix it so that we do reach the ancipated amount
+  // of request/responses in the happy flow (~rps * duration in seconds).
+  uint64_t per_thread_connections = std::max(options_.connections() / concurrency, 1UL);
+  uint64_t per_thread_rps = std::max(options_.requests_per_second() / concurrency, 1UL);
+
+  ENVOY_LOG(info,
+            "CPUs with affinity: {}. Running {} event loops. Each will use {} connections and "
+            "target {} requests per second.",
+            concurrency, concurrency, per_thread_connections, per_thread_rps);
 
   for (uint32_t i = 0; i < concurrency; i++) {
+    global_results.push_back(std::vector<uint64_t>());
+    std::vector<uint64_t>& results = global_results.at(i);
+    // TODO(oschaaf): refactor stats sink.
+    results.reserve(options_.duration().count() * per_thread_rps);
+
     auto thread = thread_factory.createThread([&]() {
       auto store = std::make_unique<Stats::IsolatedStoreImpl>();
       auto api = std::make_unique<Envoy::Api::Impl>(
@@ -98,13 +118,9 @@ bool ClientMain::run() {
       Envoy::Runtime::LoaderImpl runtime(generator, *store, tls);
       Envoy::Event::RealTimeSystem time_system;
 
-      // TODO(oschaaf): refactor header setup. euse uri parsing.
       Envoy::Http::HeaderMapImplPtr request_headers =
           std::make_unique<Envoy::Http::HeaderMapImpl>();
       request_headers->insertMethod().value(Envoy::Http::Headers::get().MethodValues.Get);
-      request_headers->insertPath().value(std::string("/"));
-      request_headers->insertHost().value(std::string("127.0.0.1"));
-      request_headers->insertScheme().value(Envoy::Http::Headers::get().SchemeValues.Http);
 
       // TODO(oschaaf): Fix options_.timeout()
       auto client =
@@ -113,14 +129,18 @@ bool ClientMain::run() {
 
       client->initialize(runtime);
 
+      LinearRateLimiter rate_limiter(per_thread_connections,
+                                     std::chrono::microseconds((1000 * 1000) / per_thread_rps));
       std::function<bool(std::function<void()>)> f =
           std::bind(&BenchmarkHttpClient::tryStartOne, client.get(), std::placeholders::_1);
-
-      std::unique_ptr<RateLimiter> rate_limiter = std::make_unique<LinearRateLimiter>(
-          options_.connections(),
-          std::chrono::microseconds((1000 * 1000) / options_.requests_per_second()));
-      Sequencer sequencer(*dispatcher, time_system, *rate_limiter, f,
+      Sequencer sequencer(*dispatcher, time_system, rate_limiter, f,
                           std::chrono::seconds(options_.duration()));
+
+      sequencer.set_latency_callback([&results](std::chrono::nanoseconds latency) {
+        ASSERT(latency.count() > 0);
+        results.push_back(latency.count());
+      });
+
       sequencer.start();
       sequencer.waitForCompletion();
       client.reset();
@@ -133,7 +153,24 @@ bool ClientMain::run() {
   for (auto& t : threads) {
     t->join();
   }
-  // TODO(oschaaf): collect and merge latency statistics from the threads
+
+  // TODO(oschaaf): proper stats tracking/configuration
+  std::ofstream myfile;
+  myfile.open("res.txt");
+
+  for (uint32_t i = 0; i < concurrency; i++) {
+    std::vector<uint64_t>& results = global_results.at(i);
+    for (int r : results) {
+      myfile << (r / 1000) << "\n";
+    }
+    double average = std::accumulate(results.begin(), results.end(), 0.0) / results.size();
+    auto minmax = std::minmax_element(results.begin(), results.end());
+    ENVOY_LOG(info, "worker {}: avg latency {} was us over {} callbacks. Min/Max: {}/{}.", i,
+              (average / 1000), results.size(), (*(minmax.first) / 1000),
+              (*(minmax.second) / 1000));
+  }
+
+  myfile.close();
 
   return true;
 }

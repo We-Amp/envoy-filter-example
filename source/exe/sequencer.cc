@@ -22,18 +22,22 @@ void Sequencer::scheduleRun() { timer_->enableTimer(std::chrono::milliseconds(1)
 
 void Sequencer::run(bool from_timer) {
   auto now = std::chrono::high_resolution_clock::now();
+
+  // We put a cap on duration here. Which means we do not care care if we initiate/complete more
+  // or less requests then anticipated based on rps * duration (seconds).
   if ((now - start_) > duration_) {
-    ENVOY_LOG(error, "Sequencer done. Initiated: {} / Completed: {}", targets_initiated_,
+    ENVOY_LOG(info, "Sequencer done. Initiated: {} / Completed: {}", targets_initiated_,
               targets_completed_);
     dispatcher_.exit();
     return;
   }
 
   while (rate_limiter_.tryAcquireOne()) {
-    ENVOY_LOG(error, "call target");
     target_([this, now]() {
-      auto dur = std::chrono::high_resolution_clock::now() - now;
-      ENVOY_LOG(error, "cb latency: {}", dur.count());
+      if (latency_callback_ != nullptr) {
+        auto dur = std::chrono::high_resolution_clock::now() - now;
+        latency_callback_(dur);
+      }
       targets_completed_++;
     });
     targets_initiated_++;

@@ -54,6 +54,11 @@ BenchmarkHttpClient::BenchmarkHttpClient(Envoy::Event::Dispatcher& dispatcher,
     port_ = Envoy::Network::Utility::portFromTcpUrl(tcp_url);
     host_ = host_.substr(0, colon_index);
   }
+
+  request_headers_->insertPath().value(path_);
+  request_headers_->insertHost().value(host_);
+  request_headers_->insertScheme().value(is_https_ ? Envoy::Http::Headers::get().SchemeValues.Https
+                                                   : Envoy::Http::Headers::get().SchemeValues.Http);
 }
 
 BenchmarkHttpClient::~BenchmarkHttpClient() {}
@@ -95,7 +100,7 @@ void BenchmarkHttpClient::initialize(Envoy::Runtime::LoaderImpl& runtime) {
   Network::TransportSocketFactoryPtr socket_factory;
   if (is_https_) {
     socket_factory = Network::TransportSocketFactoryPtr{
-        new Ssl::MClientSslSocketFactory(store_, time_source_, h2_)};
+        new Ssl::MClientSslSocketFactory(store_, time_source_, use_h2_)};
   } else {
     socket_factory = std::make_unique<Network::RawBufferSocketFactory>();
   };
