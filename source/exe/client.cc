@@ -13,7 +13,9 @@
 #include "common/network/utility.h"
 #include "common/stats/isolated_store_impl.h"
 
-#include "exe/benchmark_loop.h"
+#include "exe/benchmark_client.h"
+#include "exe/rate_limiter.h"
+#include "exe/sequencer.h"
 
 using namespace Envoy;
 
@@ -23,8 +25,7 @@ namespace {
 
 // returns 0 on failure. returns the number of HW CPU's
 // that the current thread has affinity with.
-// TODO(oschaaf): hyperthreading: maybe not take that into
-// account.
+// TODO(oschaaf): mull over what to do w/regard to hyperthreading.
 uint32_t determine_cpus_with_affinity() {
   uint32_t concurrency = 0;
   int i;
@@ -90,16 +91,41 @@ bool ClientMain::run() {
       auto api = std::make_unique<Envoy::Api::Impl>(
           std::chrono::milliseconds(1000) /*flush interval*/, thread_factory, *store);
       auto dispatcher = api->allocateDispatcher(*time_system_);
-      HttpBenchmarkTimingLoop bml(*dispatcher, *store, *time_system_, thread_factory,
-                                  options_.requests_per_second(), options_.duration(),
-                                  options_.connections(), options_.timeout(), options_.uri(),
-                                  options_.h2());
-      // TODO(oschaaf): return values should be posted back.
-      if (bml.start()) {
-        bml.waitForCompletion();
-        return true;
-      }
-      return false;
+
+      // TODO(oschaaf): not here.
+      Envoy::ThreadLocal::InstanceImpl tls;
+      Envoy::Runtime::RandomGeneratorImpl generator;
+      Envoy::Runtime::LoaderImpl runtime(generator, *store, tls);
+      Envoy::Event::RealTimeSystem time_system;
+
+      // TODO(oschaaf): refactor header setup. euse uri parsing.
+      Envoy::Http::HeaderMapImplPtr request_headers =
+          std::make_unique<Envoy::Http::HeaderMapImpl>();
+      request_headers->insertMethod().value(Envoy::Http::Headers::get().MethodValues.Get);
+      request_headers->insertPath().value(std::string("/"));
+      request_headers->insertHost().value(std::string("127.0.0.1"));
+      request_headers->insertScheme().value(Envoy::Http::Headers::get().SchemeValues.Http);
+
+      // TODO(oschaaf): Fix options_.timeout()
+      auto client =
+          std::make_unique<BenchmarkHttpClient>(*dispatcher, *store, time_system, options_.uri(),
+                                                std::move(request_headers), options_.h2());
+
+      client->initialize(runtime);
+
+      std::function<bool(std::function<void()>)> f =
+          std::bind(&BenchmarkHttpClient::tryStartOne, client.get(), std::placeholders::_1);
+
+      std::unique_ptr<RateLimiter> rate_limiter = std::make_unique<LinearRateLimiter>(
+          options_.connections(),
+          std::chrono::microseconds((1000 * 1000) / options_.requests_per_second()));
+      Sequencer sequencer(*dispatcher, time_system, *rate_limiter, f,
+                          std::chrono::seconds(options_.duration()));
+      sequencer.start();
+      sequencer.waitForCompletion();
+      client.reset();
+      // TODO(oschaaf): shouldn't be doing this here.
+      tls.shutdownGlobalThreading();
     });
     threads.push_back(std::move(thread));
   }
