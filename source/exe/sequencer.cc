@@ -37,6 +37,7 @@ void Sequencer::run(bool from_timer) {
                   "Sequencer timeout waiting for due responses. Initiated: {} / Completed: {}",
                   targets_initiated_, targets_completed_);
         dispatcher_.exit();
+        return;
       }
       scheduleRun();
     }
