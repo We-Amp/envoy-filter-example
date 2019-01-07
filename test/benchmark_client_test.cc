@@ -28,6 +28,9 @@ public:
   void TearDown() { ares_library_cleanup(); }
 };
 
+// TODO(oschaaf): this is a very,very crude end-to-end test.
+// Needs to be refactored and needs a synthetic origin to test
+// against. also, we need more tests.
 TEST_F(BenchmarkClientTest, TestTest) {
   Envoy::Event::RealTimeSystem time_system;
   auto thread_factory = Thread::ThreadFactoryImplPosix();
@@ -42,9 +45,8 @@ TEST_F(BenchmarkClientTest, TestTest) {
   request_headers->insertHost().value(std::string("127.0.0.1"));
   request_headers->insertScheme().value(Envoy::Http::Headers::get().SchemeValues.Http);
 
-  auto client = std::make_unique<BenchmarkHttpClient>(*dispatcher, store, time_system,
-                                                      "http://127.0.0.1:10001/",
-                                                      std::move(request_headers), false);
+  auto client = std::make_unique<BenchmarkHttpClient>(
+      *dispatcher, store, time_system, "http://127.0.0.1/", std::move(request_headers), false);
   Envoy::ThreadLocal::InstanceImpl tls;
   Envoy::Runtime::RandomGeneratorImpl generator;
   Envoy::Runtime::LoaderImpl runtime(generator, store, tls);

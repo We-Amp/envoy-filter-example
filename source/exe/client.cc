@@ -81,7 +81,9 @@ bool ClientMain::run() {
   }
   ENVOY_LOG(info, "CPUs with affinity: {}. Running {} event loops", concurrency, concurrency);
 
+  // We're going to fire up #concurrency benchmark loops and wait for them to complete.
   std::vector<Thread::ThreadPtr> threads;
+
   for (uint32_t i = 0; i < concurrency; i++) {
     auto thread = thread_factory.createThread([&]() {
       auto store = std::make_unique<Stats::IsolatedStoreImpl>();
@@ -105,6 +107,7 @@ bool ClientMain::run() {
   for (auto& t : threads) {
     t->join();
   }
+  // TODO(oschaaf): collect and merge latency statistics from the threads
 
   return true;
 }

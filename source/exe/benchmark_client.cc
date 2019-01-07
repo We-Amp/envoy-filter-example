@@ -119,15 +119,6 @@ void BenchmarkHttpClient::initialize(Envoy::Runtime::LoaderImpl& runtime) {
     pool_ = std::make_unique<Envoy::Http::Http1::ConnPoolImplProd>(
         dispatcher_, host, Upstream::ResourcePriority::Default, options);
   }
-
-  // TODO(oschaaf): refactor the setup of the request header
-  /*
-  request_headers_->insertMethod().value(Envoy::Http::Headers::get().MethodValues.Get);
-  request_headers_->insertPath().value(std::string(path_));
-  request_headers_->insertHost().value(std::string(host_));
-  request_headers_->insertScheme().value(is_https_ ? Envoy::Http::Headers::get().SchemeValues.Https
-                                                   : Envoy::Http::Headers::get().SchemeValues.Http);
-                                                   */
 }
 
 bool BenchmarkHttpClient::tryStartOne(std::function<void()> completion_callback) {
