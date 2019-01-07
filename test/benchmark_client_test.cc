@@ -97,10 +97,22 @@ TEST_F(BenchmarkClientTest, SillySequencerTest) {
 
   std::unique_ptr<RateLimiter> rate_limiter =
       std::make_unique<LinearRateLimiter>(1, std::chrono::microseconds(1000 * 1000));
-  Sequencer sequencer(*dispatcher, time_system, *rate_limiter, f);
-
+  Sequencer sequencer(*dispatcher, time_system, *rate_limiter, f, std::chrono::seconds(3));
+  sequencer.start();
+  sequencer.waitForCompletion();
   client.reset();
   tls.shutdownGlobalThreading();
+}
+
+// TODO(oschaaf): need to mock time to test this properly, which requires
+// changes to the rate limiter.
+TEST_F(BenchmarkClientTest, LinearRateLimiterTest) {
+  LinearRateLimiter rl(1, std::chrono::microseconds(1000 * 1000));
+  EXPECT_TRUE(rl.tryAcquireOne());
+  EXPECT_FALSE(rl.tryAcquireOne());
+  usleep((1000 * 1000) + 1);
+  EXPECT_TRUE(rl.tryAcquireOne());
+  EXPECT_FALSE(rl.tryAcquireOne());
 }
 
 } // namespace Nighthawk

@@ -23,9 +23,9 @@ public:
     return false;
   }
 
+protected:
   virtual void recoverSlots() PURE;
 
-protected:
   uint64_t max_slots_;
   uint64_t slots_;
 };
@@ -34,7 +34,7 @@ class LinearRateLimiter : public RateLimiter {
 public:
   LinearRateLimiter(uint64_t max_slots, std::chrono::microseconds slot_recovery_time)
       : RateLimiter(max_slots), slot_recovery_time_(slot_recovery_time),
-        last_checked_at_(std::chrono::high_resolution_clock::now()), overflow_count_(0) {}
+        last_checked_at_(std::chrono::high_resolution_clock::now()) {}
 
   virtual void recoverSlots() override {
     auto now = std::chrono::high_resolution_clock::now();
@@ -45,18 +45,12 @@ public:
       slots_++;
     }
 
-    if (to_add) {
-      ENVOY_LOG(warn, "Overflow detected in Linear Rate Limiter. Looks like the client is not able "
-                      "to keep up.");
-    }
-    overflow_count_ += to_add;
     last_checked_at_ = now;
   }
 
 private:
   std::chrono::microseconds slot_recovery_time_;
   std::chrono::time_point<std::chrono::high_resolution_clock> last_checked_at_;
-  uint64_t overflow_count_;
 };
 
 } // namespace Nighthawk
