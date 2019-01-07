@@ -9,10 +9,13 @@ load(
 
 envoy_cc_test(
     name = "nighthawk_test",
-    srcs = ["client_options_test.cc"],
+    srcs = ["client_options_test.cc",
+        "benchmark_client_test.cc"
+    ],
     repository = "@envoy",
     deps = [
         #"@envoy//test/integration:integration_lib"
+        "//source/exe:nighthawk_client_common_lib"
     ],
 )
 

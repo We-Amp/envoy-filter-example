@@ -15,8 +15,8 @@
 #include "envoy/upstream/upstream.h"
 
 #include "exe/client_options_impl.h"
+#include "exe/rate_limiter.h"
 #include "exe/stream_decoder.h"
-
 using namespace Envoy;
 
 namespace Nighthawk {

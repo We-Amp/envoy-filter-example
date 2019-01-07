@@ -109,7 +109,9 @@ bool BenchmarkLoop::start() {
     return false;
   }
 
-  tryStartOne([this]() { dispatcher_.exit(); });
+  // one to warm up.
+  // TODO(oschaaf): this could do with some more sophistication
+  tryStartOne([&]() { dispatcher_.exit(); });
   dispatcher_.run(Envoy::Event::Dispatcher::RunType::Block);
 
   start_ = std::chrono::high_resolution_clock::now();
@@ -209,8 +211,8 @@ void HttpBenchmarkTimingLoop::initialize() {
 
   Network::TransportSocketFactoryPtr socket_factory;
   if (is_https_) {
-    socket_factory =
-        Network::TransportSocketFactoryPtr{new Ssl::MClientSslSocketFactory(store_, time_source_)};
+    socket_factory = Network::TransportSocketFactoryPtr{
+        new Ssl::MClientSslSocketFactory(store_, time_source_, h2_)};
   } else {
     socket_factory = std::make_unique<Network::RawBufferSocketFactory>();
   };

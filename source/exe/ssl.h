@@ -65,7 +65,7 @@ public:
 // TODO(oschaaf): make a concrete implementation out of this one.
 class MClientContextConfigImpl : public Envoy::Ssl::ClientContextConfig {
 public:
-  MClientContextConfigImpl() : alpn_("h2,http/1.1") {}
+  MClientContextConfigImpl(bool h2) : alpn_(h2 ? "h2" : "http/1.1") {}
   virtual ~MClientContextConfigImpl() {}
 
   virtual const std::string& alpnProtocols() const { return alpn_; };
@@ -117,9 +117,9 @@ class MClientSslSocketFactory : public Network::TransportSocketFactory,
                                 public Secret::SecretCallbacks,
                                 Logger::Loggable<Logger::Id::config> {
 public:
-  MClientSslSocketFactory(Envoy::Stats::Store& store, Envoy::TimeSource& time_source) {
+  MClientSslSocketFactory(Envoy::Stats::Store& store, Envoy::TimeSource& time_source, bool h2) {
     // TODO(oschaaf): check for leaks
-    Envoy::Ssl::ClientContextConfig* config = new MClientContextConfigImpl();
+    Envoy::Ssl::ClientContextConfig* config = new MClientContextConfigImpl(h2);
     Envoy::Stats::ScopePtr scope = store.createScope(fmt::format("cluster.{}.", "ssl-client"));
     Envoy::Ssl::ClientContextSharedPtr context =
         std::make_shared<Envoy::Ssl::ClientContextImpl>(*(scope.release()), *config, time_source);
