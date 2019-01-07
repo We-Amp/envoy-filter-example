@@ -124,6 +124,8 @@ void BenchmarkHttpClient::initialize(Envoy::Runtime::LoaderImpl& runtime) {
     pool_ = std::make_unique<Envoy::Http::Http1::ConnPoolImplProd>(
         dispatcher_, host, Upstream::ResourcePriority::Default, options);
   }
+
+  BenchmarkHttpClient::tryStartOne([]() { ENVOY_LOG(info, "warmup request done."); });
 }
 
 bool BenchmarkHttpClient::tryStartOne(std::function<void()> completion_callback) {
