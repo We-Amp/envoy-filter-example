@@ -47,6 +47,8 @@ envoy_cc_library(
 	    "client_options_impl.cc",
         "benchmark_loop.cc",
         "benchmark_client.cc",
+        "rate_limiter.cc",
+        "sequencer.cc",
     ],
     hdrs = [
         "client.h",
@@ -55,6 +57,8 @@ envoy_cc_library(
         "ssl.h",
         "benchmark_loop.h",
         "benchmark_client.h",
+        "rate_limiter.h",
+        "sequencer.h",
     ],
     visibility = ["//visibility:public"],
     repository = "@envoy",

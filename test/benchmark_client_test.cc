@@ -13,6 +13,8 @@
 #include "common/stats/isolated_store_impl.h"
 
 #include "exe/benchmark_client.h"
+#include "exe/rate_limiter.h"
+#include "exe/sequencer.h"
 
 using namespace Envoy;
 
@@ -31,7 +33,7 @@ public:
 // TODO(oschaaf): this is a very,very crude end-to-end test.
 // Needs to be refactored and needs a synthetic origin to test
 // against. also, we need more tests.
-TEST_F(BenchmarkClientTest, TestTest) {
+TEST_F(BenchmarkClientTest, SillyEndToEndTest) {
   Envoy::Event::RealTimeSystem time_system;
   auto thread_factory = Thread::ThreadFactoryImplPosix();
 
@@ -61,6 +63,42 @@ TEST_F(BenchmarkClientTest, TestTest) {
 
   dispatcher->run(Envoy::Event::Dispatcher::RunType::Block);
   EXPECT_EQ(2, response_count);
+  // SequencerTarget foo = std::bind(&BenchmarkHttpClient::tryStartOne, client,
+  // std::placeholders::_1);
+  std::function<bool(std::function<void()>)> f =
+      std::bind(&BenchmarkHttpClient::tryStartOne, client.get(), std::placeholders::_1);
+  client.reset();
+  tls.shutdownGlobalThreading();
+}
+
+TEST_F(BenchmarkClientTest, SillySequencerTest) {
+  Envoy::Event::RealTimeSystem time_system;
+  auto thread_factory = Thread::ThreadFactoryImplPosix();
+
+  Stats::IsolatedStoreImpl store;
+  Envoy::Api::Impl api(std::chrono::milliseconds(1000) /*flush interval*/, thread_factory, store);
+  auto dispatcher = api.allocateDispatcher(time_system);
+
+  Envoy::Http::HeaderMapImplPtr request_headers = std::make_unique<Envoy::Http::HeaderMapImpl>();
+  request_headers->insertMethod().value(Envoy::Http::Headers::get().MethodValues.Get);
+  request_headers->insertPath().value(std::string("/"));
+  request_headers->insertHost().value(std::string("127.0.0.1"));
+  request_headers->insertScheme().value(Envoy::Http::Headers::get().SchemeValues.Http);
+
+  auto client = std::make_unique<BenchmarkHttpClient>(
+      *dispatcher, store, time_system, "http://127.0.0.1/", std::move(request_headers), false);
+  Envoy::ThreadLocal::InstanceImpl tls;
+  Envoy::Runtime::RandomGeneratorImpl generator;
+  Envoy::Runtime::LoaderImpl runtime(generator, store, tls);
+  client->initialize(runtime);
+
+  std::function<bool(std::function<void()>)> f =
+      std::bind(&BenchmarkHttpClient::tryStartOne, client.get(), std::placeholders::_1);
+
+  std::unique_ptr<RateLimiter> rate_limiter =
+      std::make_unique<LinearRateLimiter>(1, std::chrono::microseconds(1000 * 1000));
+  Sequencer sequencer(*dispatcher, time_system, *rate_limiter, f);
+
   client.reset();
   tls.shutdownGlobalThreading();
 }
