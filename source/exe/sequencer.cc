@@ -9,10 +9,7 @@ Sequencer::Sequencer(Envoy::Event::Dispatcher& dispatcher, Envoy::TimeSource& ti
       timer_(dispatcher_.createTimer([this]() { run(true); })), rate_limiter_(rate_limiter),
       target_(target), duration_(duration), start_(std::chrono::high_resolution_clock::now()),
       targets_initiated_(0), targets_completed_(0) {
-  ENVOY_LOG(info, "booting sequencer");
   (void)time_source_;
-  (void)rate_limiter_;
-  (void)target_;
 }
 
 void Sequencer::start() {
@@ -25,12 +22,17 @@ void Sequencer::scheduleRun() { timer_->enableTimer(std::chrono::milliseconds(1)
 
 void Sequencer::run(bool from_timer) {
   auto now = std::chrono::high_resolution_clock::now();
-  if (now - start_ > duration_) {
+  if ((now - start_) > duration_) {
     dispatcher_.exit();
   }
 
   while (rate_limiter_.tryAcquireOne()) {
-    target_([this]() { targets_completed_++; });
+    ENVOY_LOG(error, "call target");
+    target_([this, now]() {
+      auto dur = std::chrono::high_resolution_clock::now() - now;
+      ENVOY_LOG(error, "cb latency: {}", dur.count());
+      targets_completed_++;
+    });
     targets_initiated_++;
   }
 
