@@ -1,5 +1,9 @@
 #include "exe/sequencer.h"
 
+#include <chrono>
+
+using namespace std::chrono_literals;
+
 namespace Nighthawk {
 
 Sequencer::Sequencer(Envoy::Event::Dispatcher& dispatcher, Envoy::TimeSource& time_source,
@@ -27,12 +31,11 @@ void Sequencer::run(bool from_timer) {
   // or less requests then anticipated based on rps * duration (seconds).
   if ((now - start_) > duration_) {
     if (targets_completed_ == targets_initiated_) {
-      ENVOY_LOG(info, "Sequencer done. Initiated: {} / Completed: {}", targets_initiated_,
-                targets_completed_);
+      ENVOY_LOG(info, "Sequencer done processing {} operations", targets_completed_);
       dispatcher_.exit();
     } else {
       // We wait untill all due responses are in.
-      if (((now - start_) - duration_) > std::chrono::seconds(5)) {
+      if (((now - start_) - duration_) > 5s) {
         ENVOY_LOG(warn,
                   "Sequencer timeout waiting for due responses. Initiated: {} / Completed: {}",
                   targets_initiated_, targets_completed_);
