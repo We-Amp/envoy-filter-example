@@ -128,7 +128,7 @@ void BenchmarkHttpClient::initialize(Envoy::Runtime::LoaderImpl& runtime) {
   BenchmarkHttpClient::tryStartOne([]() { ENVOY_LOG(info, "warmup request done."); });
 }
 
-bool BenchmarkHttpClient::tryStartOne(std::function<void()> completion_callback) {
+bool BenchmarkHttpClient::tryStartOne(Nighthawk::Http::StreamDecoderCallback completion_callback) {
   auto stream_decoder = new Nighthawk::Http::StreamDecoder(
       [completion_callback]() -> void { completion_callback(); });
   auto cancellable = pool_->newStream(*stream_decoder, *this);

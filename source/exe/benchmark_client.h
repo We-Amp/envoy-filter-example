@@ -2,20 +2,17 @@
 
 #include "common/common/logger.h"
 #include "common/http/header_map_impl.h"
-//#include "common/http/headers.h"
-
 #include "common/runtime/runtime_impl.h"
 #include "common/thread_local/thread_local_impl.h"
-
-#include "envoy/http/conn_pool.h"
-#include "envoy/network/address.h"
-
 #include "envoy/event/dispatcher.h"
 #include "envoy/event/timer.h"
 #include "envoy/http/conn_pool.h"
+#include "envoy/network/address.h"
 #include "envoy/runtime/runtime.h"
 #include "envoy/stats/store.h"
 #include "envoy/upstream/upstream.h"
+
+#include "exe/stream_decoder.h"
 
 namespace Nighthawk {
 
@@ -28,7 +25,7 @@ public:
   ~BenchmarkHttpClient();
 
   void initialize(Envoy::Runtime::LoaderImpl& runtime);
-  bool tryStartOne(std::function<void()> completion_callback);
+  bool tryStartOne(Nighthawk::Http::StreamDecoderCallback completion_callback);
 
   // ConnectionPool::Callbacks
   void onPoolFailure(Envoy::Http::ConnectionPool::PoolFailureReason reason,
