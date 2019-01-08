@@ -1,3 +1,5 @@
+#include <chrono>
+
 #include "ares.h"
 
 #include "gtest/gtest.h"
@@ -17,6 +19,7 @@
 #include "exe/sequencer.h"
 
 using namespace Envoy;
+using namespace std::chrono_literals;
 
 namespace Nighthawk {
 
@@ -92,9 +95,8 @@ TEST_F(BenchmarkClientTest, SillySequencerTest) {
   std::function<bool(std::function<void()>)> f =
       std::bind(&BenchmarkHttpClient::tryStartOne, client.get(), std::placeholders::_1);
 
-  std::unique_ptr<RateLimiter> rate_limiter =
-      std::make_unique<LinearRateLimiter>(1, std::chrono::microseconds(1000 * 1000));
-  Sequencer sequencer(*dispatcher, time_system, *rate_limiter, f, std::chrono::seconds(3));
+  std::unique_ptr<RateLimiter> rate_limiter = std::make_unique<LinearRateLimiter>(1s);
+  Sequencer sequencer(*dispatcher, time_system, *rate_limiter, f, 3s);
   sequencer.start();
   sequencer.waitForCompletion();
   client.reset();
@@ -104,10 +106,12 @@ TEST_F(BenchmarkClientTest, SillySequencerTest) {
 // TODO(oschaaf): need to mock time to test this properly, which requires
 // changes to the rate limiter.
 TEST_F(BenchmarkClientTest, LinearRateLimiterTest) {
-  LinearRateLimiter rl(1, std::chrono::microseconds(1000 * 1000));
+  LinearRateLimiter rl(100ms);
+  EXPECT_FALSE(rl.tryAcquireOne());
+  std::this_thread::sleep_for(100ms);
   EXPECT_TRUE(rl.tryAcquireOne());
   EXPECT_FALSE(rl.tryAcquireOne());
-  usleep((1000 * 1000) + 1);
+  std::this_thread::sleep_for(100ms);
   EXPECT_TRUE(rl.tryAcquireOne());
   EXPECT_FALSE(rl.tryAcquireOne());
 }

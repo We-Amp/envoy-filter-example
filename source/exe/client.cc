@@ -18,6 +18,7 @@
 #include "exe/rate_limiter.h"
 #include "exe/sequencer.h"
 
+using namespace std::chrono_literals;
 using namespace Envoy;
 
 namespace Nighthawk {
@@ -129,8 +130,7 @@ bool ClientMain::run() {
 
       client->initialize(runtime);
 
-      LinearRateLimiter rate_limiter(per_thread_connections,
-                                     std::chrono::microseconds((1000 * 1000) / per_thread_rps));
+      LinearRateLimiter rate_limiter(1s / per_thread_rps);
       std::function<bool(std::function<void()>)> f =
           std::bind(&BenchmarkHttpClient::tryStartOne, client.get(), std::placeholders::_1);
       Sequencer sequencer(*dispatcher, time_system, rate_limiter, f,

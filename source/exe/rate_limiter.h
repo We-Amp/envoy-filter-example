@@ -7,16 +7,9 @@ namespace Nighthawk {
 
 class RateLimiter : public Envoy::Logger::Loggable<Envoy::Logger::Id::main> {
 public:
-  RateLimiter(uint64_t max_slots) : max_slots_(max_slots), available_slots_(max_slots) {}
-
+  RateLimiter() {}
   virtual ~RateLimiter() {}
-  virtual bool tryAcquireOne();
-
-protected:
-  virtual void recoverSlots() PURE;
-
-  uint64_t max_slots_;
-  uint64_t available_slots_;
+  virtual bool tryAcquireOne() PURE;
 };
 
 // Simple rate limiter that will allow acquiring at a linear pace.
@@ -24,15 +17,16 @@ protected:
 // instantiation.
 class LinearRateLimiter : public RateLimiter {
 public:
-  LinearRateLimiter(uint64_t max_slots, std::chrono::microseconds slot_recovery_time)
-      : RateLimiter(max_slots), total_slots_acquired_(0), slot_recovery_time_(slot_recovery_time),
+  LinearRateLimiter(std::chrono::microseconds pace)
+      : RateLimiter(), acquireable_count_(0), acquired_count_(0), pace_(pace),
         started_at_(std::chrono::high_resolution_clock::now()) {}
 
-  virtual void recoverSlots() override;
+  virtual bool tryAcquireOne() override;
 
 private:
-  uint64_t total_slots_acquired_;
-  std::chrono::microseconds slot_recovery_time_;
+  int64_t acquireable_count_;
+  uint64_t acquired_count_;
+  std::chrono::microseconds pace_;
   std::chrono::time_point<std::chrono::high_resolution_clock> started_at_;
 };
 
