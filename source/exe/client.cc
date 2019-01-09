@@ -94,13 +94,17 @@ bool ClientMain::run() {
   // TODO(oschaaf): as we spread the tasks accross workers, numbers may not always align
   // well. We may want to warn about that, or fix it so that we do reach the ancipated amount
   // of request/responses in the happy flow (~rps * duration in seconds).
+  // TODO(oschaaf): we actually may not want to do this, consider removing this
+  // and delegate adding up the numbers to the user as concurrency increases.
+  // Perhaps default to a single event loop when we do.
   uint64_t per_thread_connections = std::max(options_.connections() / concurrency, 1UL);
   uint64_t per_thread_rps = std::max(options_.requests_per_second() / concurrency, 1UL);
 
-  ENVOY_LOG(info,
-            "CPUs with affinity: {}. Running {} event loops. Each will use {} connections and "
-            "target {} requests per second.",
-            concurrency, concurrency, per_thread_connections, per_thread_rps);
+  ENVOY_LOG(
+      info,
+      "Found {} (v)CPUs with affinity. Running {} event loops. Each will use {} connections and "
+      "target {} requests per second.",
+      concurrency, concurrency, per_thread_connections, per_thread_rps);
 
   for (uint32_t i = 0; i < concurrency; i++) {
     global_results.push_back(std::vector<uint64_t>());
