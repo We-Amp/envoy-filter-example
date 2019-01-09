@@ -4,6 +4,8 @@
 
 #include "gtest/gtest.h"
 
+#include "test/test_common/simulated_time_system.h"
+
 #include "common/api/api_impl.h"
 #include "common/common/compiler_requirements.h"
 #include "common/common/thread_impl.h"
@@ -103,14 +105,19 @@ TEST_F(BenchmarkClientTest, SillySequencerTest) {
 // TODO(oschaaf): need to mock time to test this properly, which requires
 // changes to the rate limiter.
 TEST_F(BenchmarkClientTest, LinearRateLimiterTest) {
-  Envoy::RealTimeSource time_source;
-  LinearRateLimiter rl(time_source, 100ms);
+  Envoy::Event::SimulatedTimeSystem time_system;
+  LinearRateLimiter rl(time_system, 100ms);
+
   EXPECT_FALSE(rl.tryAcquireOne());
-  std::this_thread::sleep_for(100ms);
+
+  time_system.sleep(100ms);
   EXPECT_TRUE(rl.tryAcquireOne());
   EXPECT_FALSE(rl.tryAcquireOne());
-  std::this_thread::sleep_for(100ms);
-  EXPECT_TRUE(rl.tryAcquireOne());
+
+  time_system.sleep(1s);
+  for (int i = 0; i < 10; i++) {
+    EXPECT_TRUE(rl.tryAcquireOne());
+  }
   EXPECT_FALSE(rl.tryAcquireOne());
 }
 

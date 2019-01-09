@@ -14,7 +14,7 @@ envoy_cc_test(
     ],
     repository = "@envoy",
     deps = [
-        #"@envoy//test/integration:integration_lib"
+        "@envoy//test/integration:integration_lib",
         "//source/exe:nighthawk_client_common_lib"
     ],
 )
