@@ -102,23 +102,4 @@ TEST_F(BenchmarkClientTest, SillySequencerTest) {
   tls.shutdownGlobalThreading();
 }
 
-// TODO(oschaaf): need to mock time to test this properly, which requires
-// changes to the rate limiter.
-TEST_F(BenchmarkClientTest, LinearRateLimiterTest) {
-  Envoy::Event::SimulatedTimeSystem time_system;
-  LinearRateLimiter rl(time_system, 100ms);
-
-  EXPECT_FALSE(rl.tryAcquireOne());
-
-  time_system.sleep(100ms);
-  EXPECT_TRUE(rl.tryAcquireOne());
-  EXPECT_FALSE(rl.tryAcquireOne());
-
-  time_system.sleep(1s);
-  for (int i = 0; i < 10; i++) {
-    EXPECT_TRUE(rl.tryAcquireOne());
-  }
-  EXPECT_FALSE(rl.tryAcquireOne());
-}
-
 } // namespace Nighthawk
