@@ -12,6 +12,7 @@ envoy_cc_test(
     srcs = ["client_options_test.cc",
         "benchmark_client_test.cc",
         "rate_limiter_test.cc",
+        "sequencer_test.cc",
     ],
     repository = "@envoy",
     deps = [

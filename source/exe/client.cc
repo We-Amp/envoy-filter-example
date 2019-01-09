@@ -110,8 +110,8 @@ bool ClientMain::run() {
 
     auto thread = thread_factory.createThread([&]() {
       auto store = std::make_unique<Stats::IsolatedStoreImpl>();
-      auto api = std::make_unique<Envoy::Api::Impl>(
-          std::chrono::milliseconds(1000) /*flush interval*/, thread_factory, *store);
+      auto api =
+          std::make_unique<Envoy::Api::Impl>(1000ms /*flush interval*/, thread_factory, *store);
       auto dispatcher = api->allocateDispatcher(*time_system_);
 
       // TODO(oschaaf): not here.

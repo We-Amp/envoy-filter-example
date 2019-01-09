@@ -43,7 +43,7 @@ TEST_F(BenchmarkClientTest, SillyEndToEndTest) {
   auto thread_factory = Thread::ThreadFactoryImplPosix();
 
   Stats::IsolatedStoreImpl store;
-  Envoy::Api::Impl api(std::chrono::milliseconds(1000) /*flush interval*/, thread_factory, store);
+  Envoy::Api::Impl api(1000ms /*flush interval*/, thread_factory, store);
   auto dispatcher = api.allocateDispatcher(time_system);
 
   Envoy::Http::HeaderMapImplPtr request_headers = std::make_unique<Envoy::Http::HeaderMapImpl>();
@@ -78,7 +78,7 @@ TEST_F(BenchmarkClientTest, SillySequencerTest) {
   auto thread_factory = Thread::ThreadFactoryImplPosix();
 
   Stats::IsolatedStoreImpl store;
-  Envoy::Api::Impl api(std::chrono::milliseconds(1000) /*flush interval*/, thread_factory, store);
+  Envoy::Api::Impl api(1000ms /*flush interval*/, thread_factory, store);
   auto dispatcher = api.allocateDispatcher(time_system);
 
   Envoy::Http::HeaderMapImplPtr request_headers = std::make_unique<Envoy::Http::HeaderMapImpl>();
@@ -86,8 +86,8 @@ TEST_F(BenchmarkClientTest, SillySequencerTest) {
 
   auto client = std::make_unique<BenchmarkHttpClient>(
       *dispatcher, store, time_system, "https://localhost/", std::move(request_headers), true);
-  Envoy::ThreadLocal::InstanceImpl tls;
   Envoy::Runtime::RandomGeneratorImpl generator;
+  Envoy::ThreadLocal::InstanceImpl tls;
   Envoy::Runtime::LoaderImpl runtime(generator, store, tls);
   client->initialize(runtime);
 

@@ -1,6 +1,6 @@
-#include "exe/sequencer.h"
+#include "nighthawk/common/exception.h"
 
-#include <chrono>
+#include "exe/sequencer.h"
 
 using namespace std::chrono_literals;
 
@@ -8,24 +8,26 @@ namespace Nighthawk {
 
 Sequencer::Sequencer(Envoy::Event::Dispatcher& dispatcher, Envoy::TimeSource& time_source,
                      RateLimiter& rate_limiter, SequencerTarget& target,
-                     std::chrono::seconds duration)
+                     std::chrono::microseconds duration)
     : dispatcher_(dispatcher), time_source_(time_source),
       timer_(dispatcher_.createTimer([this]() { run(true); })), rate_limiter_(rate_limiter),
-      target_(target), duration_(duration), start_(std::chrono::high_resolution_clock::now()),
-      targets_initiated_(0), targets_completed_(0) {}
-
-void Sequencer::start() {
-  start_ = std::chrono::high_resolution_clock::now();
-  run(false);
-  scheduleRun();
-  // TODO(oschaaf): use TimeeSource abstraction.
-  (void)time_source_;
+      target_(target), duration_(duration), start_(time_source.monotonicTime().min()),
+      targets_initiated_(0), targets_completed_(0) {
+  if (target_ == nullptr) {
+    throw NighthawkException("Sequencer must be constructed with a SequencerTarget.");
+  }
 }
 
-void Sequencer::scheduleRun() { timer_->enableTimer(std::chrono::milliseconds(1)); }
+void Sequencer::start() {
+  start_ = time_source_.monotonicTime();
+  run(false);
+  scheduleRun();
+}
+
+void Sequencer::scheduleRun() { timer_->enableTimer(1ms); }
 
 void Sequencer::run(bool from_timer) {
-  auto now = std::chrono::high_resolution_clock::now();
+  auto now = time_source_.monotonicTime();
 
   // We put a cap on duration here. Which means we do not care care if we initiate/complete more
   // or less requests then anticipated based on rps * duration (seconds).
@@ -51,7 +53,7 @@ void Sequencer::run(bool from_timer) {
   while (rate_limiter_.tryAcquireOne()) {
     bool state = target_([this, &state, now]() {
       if (latency_callback_ != nullptr) {
-        auto dur = std::chrono::high_resolution_clock::now() - now;
+        auto dur = time_source_.monotonicTime() - now;
         latency_callback_(dur);
         (void)state;
       }
