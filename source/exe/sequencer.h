@@ -1,7 +1,6 @@
 #pragma once
 
 #include "common/common/logger.h"
-#include "common/event/real_time_system.h"
 
 #include "envoy/event/dispatcher.h"
 #include "envoy/event/timer.h"

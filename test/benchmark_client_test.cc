@@ -46,9 +46,6 @@ TEST_F(BenchmarkClientTest, SillyEndToEndTest) {
 
   Envoy::Http::HeaderMapImplPtr request_headers = std::make_unique<Envoy::Http::HeaderMapImpl>();
   request_headers->insertMethod().value(Envoy::Http::Headers::get().MethodValues.Get);
-  request_headers->insertPath().value(std::string("/"));
-  request_headers->insertHost().value(std::string("127.0.0.1"));
-  request_headers->insertScheme().value(Envoy::Http::Headers::get().SchemeValues.Http);
 
   auto client = std::make_unique<BenchmarkHttpClient>(
       *dispatcher, store, time_system, "http://127.0.0.1/", std::move(request_headers), false);
@@ -95,7 +92,7 @@ TEST_F(BenchmarkClientTest, SillySequencerTest) {
   std::function<bool(std::function<void()>)> f =
       std::bind(&BenchmarkHttpClient::tryStartOne, client.get(), std::placeholders::_1);
 
-  std::unique_ptr<RateLimiter> rate_limiter = std::make_unique<LinearRateLimiter>(1s);
+  std::unique_ptr<RateLimiter> rate_limiter = std::make_unique<LinearRateLimiter>(time_system, 1s);
   Sequencer sequencer(*dispatcher, time_system, *rate_limiter, f, 3s);
   sequencer.start();
   sequencer.waitForCompletion();
@@ -106,7 +103,8 @@ TEST_F(BenchmarkClientTest, SillySequencerTest) {
 // TODO(oschaaf): need to mock time to test this properly, which requires
 // changes to the rate limiter.
 TEST_F(BenchmarkClientTest, LinearRateLimiterTest) {
-  LinearRateLimiter rl(100ms);
+  Envoy::RealTimeSource time_source;
+  LinearRateLimiter rl(time_source, 100ms);
   EXPECT_FALSE(rl.tryAcquireOne());
   std::this_thread::sleep_for(100ms);
   EXPECT_TRUE(rl.tryAcquireOne());

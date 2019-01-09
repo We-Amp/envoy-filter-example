@@ -11,6 +11,7 @@
 #include "common/common/compiler_requirements.h"
 #include "common/common/thread_impl.h"
 #include "common/event/dispatcher_impl.h"
+#include "common/event/real_time_system.h"
 #include "common/network/utility.h"
 #include "common/stats/isolated_store_impl.h"
 
@@ -132,7 +133,7 @@ bool ClientMain::run() {
 
       // With the linear rate limiter, we run an open-loop test, where we initiate new
       // calls regardless of the number of comletions we observe keeping up.
-      LinearRateLimiter rate_limiter(1000000us / per_thread_rps);
+      LinearRateLimiter rate_limiter(time_system, 1000000us / per_thread_rps);
       std::function<bool(std::function<void()>)> f =
           std::bind(&BenchmarkHttpClient::tryStartOne, client.get(), std::placeholders::_1);
       Sequencer sequencer(*dispatcher, time_system, rate_limiter, f,
