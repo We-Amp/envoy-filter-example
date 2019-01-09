@@ -13,7 +13,7 @@ void StreamDecoder::decodeHeaders(Envoy::Http::HeaderMapPtr&& headers, bool end_
   complete_ = end_stream;
   headers_ = std::move(headers);
   if (complete_) {
-    onComplete();
+    onComplete(true);
   }
 }
 
@@ -21,23 +21,23 @@ void StreamDecoder::decodeData(Buffer::Instance&, bool end_stream) {
   ASSERT(!complete_);
   complete_ = end_stream;
   if (complete_) {
-    onComplete();
+    onComplete(true);
   }
 }
 
 void StreamDecoder::decodeTrailers(Envoy::Http::HeaderMapPtr&&) { NOT_IMPLEMENTED_GCOVR_EXCL_LINE; }
 
-void StreamDecoder::onComplete() {
+void StreamDecoder::onComplete(bool success) {
   ASSERT(complete_);
-  // TODO(oschaaf): Handle error responses. We need to communicate at least success or not to
-  // clients. Maybe pass in ourselves to the callback?
-  on_complete_cb_();
+  on_complete_cb_.onComplete(success, *headers_);
+  caller_completion_callback_();
   delete this;
 }
 
 void StreamDecoder::onResetStream(Envoy::Http::StreamResetReason) {
   // TODO(oschaaf): handle this.
   // ADD_FAILURE();
+  onComplete(false);
   delete this;
 }
 

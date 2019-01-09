@@ -145,6 +145,12 @@ bool ClientMain::run() {
 
       sequencer.start();
       sequencer.waitForCompletion();
+      ENVOY_LOG(info,
+                "Connection: connect failures: {}, overflow failures: {} . Protocol: good {} / bad "
+                "{} / reset {}",
+                client->pool_connect_failures(), client->pool_overflow_failures(),
+                client->http_good_response_count(), client->http_bad_response_count(),
+                client->stream_reset_count());
       client.reset();
       // TODO(oschaaf): shouldn't be doing this here.
       tls.shutdownGlobalThreading();
@@ -162,12 +168,17 @@ bool ClientMain::run() {
 
   for (uint32_t i = 0; i < concurrency; i++) {
     std::vector<uint64_t>& results = global_results.at(i);
+    // Remove first element, consider it a warmup call.
+    // TODO(oschaaf):
+    if (!results.empty()) {
+      results.erase(results.begin());
+    }
     for (int r : results) {
       myfile << (r / 1000) << "\n";
     }
     double average = std::accumulate(results.begin(), results.end(), 0.0) / results.size();
     auto minmax = std::minmax_element(results.begin(), results.end());
-    ENVOY_LOG(info, "worker {}: avg latency {} was us over {} callbacks. Min/Max: {}/{}.", i,
+    ENVOY_LOG(info, "worker {}: avg latency {}us over {} callbacks. Min/Max: {}/{}.", i,
               (average / 1000), results.size(), (*(minmax.first) / 1000),
               (*(minmax.second) / 1000));
   }

@@ -35,7 +35,8 @@ BenchmarkHttpClient::BenchmarkHttpClient(Envoy::Event::Dispatcher& dispatcher,
     : dispatcher_(dispatcher), store_(store), time_source_(time_source),
       request_headers_(std::move(request_headers)), use_h2_(use_h2), is_https_(false), host_(""),
       port_(0), path_("/"), dns_failure_(true), timeout_(5), max_connections_(1),
-      pool_connect_failures_(0), pool_overflow_failures_(0) {
+      pool_connect_failures_(0), pool_overflow_failures_(0), stream_reset_count_(0),
+      http_good_response_count_(0), http_bad_response_count_(0) {
 
   // parse incoming uri into fields that we need.
   // TODO(oschaaf): refactor. also input validation, etc.
@@ -124,18 +125,30 @@ void BenchmarkHttpClient::initialize(Envoy::Runtime::LoaderImpl& runtime) {
     pool_ = std::make_unique<Envoy::Http::Http1::ConnPoolImplProd>(
         dispatcher_, host, Upstream::ResourcePriority::Default, options);
   }
-
-  BenchmarkHttpClient::tryStartOne([]() { ENVOY_LOG(info, "warmup request done."); });
 }
 
-bool BenchmarkHttpClient::tryStartOne(Nighthawk::Http::StreamDecoderCallback completion_callback) {
-  auto stream_decoder = new Nighthawk::Http::StreamDecoder(
-      [completion_callback]() -> void { completion_callback(); });
+bool BenchmarkHttpClient::tryStartOne(std::function<void()> caller_completion_callback) {
+  auto stream_decoder = new Nighthawk::Http::StreamDecoder(caller_completion_callback, *this);
   auto cancellable = pool_->newStream(*stream_decoder, *this);
   (void)cancellable;
   // TODO(oschaaf): double check this API. The happy flow works, but we probaly
   // need work here.
   return true;
+}
+
+void BenchmarkHttpClient::onComplete(bool success, const HeaderMap& headers) {
+  if (!success) {
+    stream_reset_count_++;
+  } else {
+    ASSERT(headers.Status());
+    int64_t status = Envoy::Http::Utility::getResponseStatus(headers);
+    // TODO(oschaaf):
+    if (status >= 400 && status <= 599) {
+      http_bad_response_count_++;
+    } else {
+      http_good_response_count_++;
+    }
+  }
 }
 
 void BenchmarkHttpClient::onPoolFailure(Envoy::Http::ConnectionPool::PoolFailureReason reason,

@@ -8,14 +8,20 @@ using namespace Envoy::Http;
 namespace Nighthawk {
 namespace Http {
 
-typedef std::function<void()> StreamDecoderCallback;
+class StreamDecoderCompletionCallback {
+public:
+  virtual ~StreamDecoderCompletionCallback() {}
+  virtual void onComplete(bool success, const HeaderMap& headers) PURE;
+};
 
 /**
  * A self destructing response decoder that discards the response body.
  */
 class StreamDecoder : public Envoy::Http::StreamDecoder, public Envoy::Http::StreamCallbacks {
 public:
-  StreamDecoder(StreamDecoderCallback on_complete_cb) : on_complete_cb_(on_complete_cb) {}
+  StreamDecoder(std::function<void()> caller_completion_callback,
+                StreamDecoderCompletionCallback& on_complete_cb)
+      : caller_completion_callback_(caller_completion_callback), on_complete_cb_(on_complete_cb) {}
 
   bool complete() { return complete_; }
   const HeaderMap& headers() { return *headers_; }
@@ -33,11 +39,12 @@ public:
   void onBelowWriteBufferLowWatermark() override {}
 
 private:
-  void onComplete();
+  void onComplete(bool success);
 
   HeaderMapPtr headers_;
   bool complete_{};
-  StreamDecoderCallback on_complete_cb_;
+  std::function<void()> caller_completion_callback_;
+  StreamDecoderCompletionCallback& on_complete_cb_;
 };
 
 } // namespace Http

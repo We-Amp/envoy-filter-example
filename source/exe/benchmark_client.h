@@ -16,7 +16,8 @@
 
 namespace Nighthawk {
 
-class BenchmarkHttpClient : public Envoy::Logger::Loggable<Envoy::Logger::Id::main>,
+class BenchmarkHttpClient : public Nighthawk::Http::StreamDecoderCompletionCallback,
+                            public Envoy::Logger::Loggable<Envoy::Logger::Id::main>,
                             public Envoy::Http::ConnectionPool::Callbacks {
 public:
   BenchmarkHttpClient(Envoy::Event::Dispatcher& dispatcher, Envoy::Stats::Store& store,
@@ -25,13 +26,22 @@ public:
   ~BenchmarkHttpClient();
 
   void initialize(Envoy::Runtime::LoaderImpl& runtime);
-  bool tryStartOne(Nighthawk::Http::StreamDecoderCallback completion_callback);
+  bool tryStartOne(std::function<void()> caller_completion_callback);
 
   // ConnectionPool::Callbacks
   void onPoolFailure(Envoy::Http::ConnectionPool::PoolFailureReason reason,
                      Envoy::Upstream::HostDescriptionConstSharedPtr host) override;
   void onPoolReady(Envoy::Http::StreamEncoder& encoder,
                    Envoy::Upstream::HostDescriptionConstSharedPtr host) override;
+
+  // StreamDecoderCompletionCallback
+  void onComplete(bool success, const HeaderMap& headers) override;
+
+  uint64_t pool_connect_failures() { return pool_connect_failures_; }
+  uint64_t pool_overflow_failures() { return pool_overflow_failures_; }
+  uint64_t stream_reset_count() { return stream_reset_count_; }
+  uint64_t http_good_response_count() { return http_good_response_count_; }
+  uint64_t http_bad_response_count() { return http_bad_response_count_; }
 
 private:
   Envoy::Event::Dispatcher& dispatcher_;
@@ -53,6 +63,9 @@ private:
   Envoy::Http::ConnectionPool::InstancePtr pool_;
   Envoy::Event::TimerPtr timer_;
   Envoy::Runtime::RandomGeneratorImpl generator_;
+  uint64_t stream_reset_count_;
+  uint64_t http_good_response_count_;
+  uint64_t http_bad_response_count_;
 };
 
 } // namespace Nighthawk

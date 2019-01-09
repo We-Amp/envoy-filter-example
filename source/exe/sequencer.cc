@@ -12,14 +12,14 @@ Sequencer::Sequencer(Envoy::Event::Dispatcher& dispatcher, Envoy::TimeSource& ti
     : dispatcher_(dispatcher), time_source_(time_source),
       timer_(dispatcher_.createTimer([this]() { run(true); })), rate_limiter_(rate_limiter),
       target_(target), duration_(duration), start_(std::chrono::high_resolution_clock::now()),
-      targets_initiated_(0), targets_completed_(0) {
-  (void)time_source_;
-}
+      targets_initiated_(0), targets_completed_(0) {}
 
 void Sequencer::start() {
   start_ = std::chrono::high_resolution_clock::now();
   run(false);
   scheduleRun();
+  // TODO(oschaaf): use TimeeSource abstraction.
+  (void)time_source_;
 }
 
 void Sequencer::scheduleRun() { timer_->enableTimer(std::chrono::milliseconds(1)); }
@@ -35,6 +35,7 @@ void Sequencer::run(bool from_timer) {
       dispatcher_.exit();
     } else {
       // We wait untill all due responses are in.
+      // TODO(oschaaf): 5s arbitrary grace timeout period should be a config option.
       if (((now - start_) - duration_) > 5s) {
         ENVOY_LOG(warn,
                   "Sequencer timeout waiting for due responses. Initiated: {} / Completed: {}",
@@ -48,10 +49,11 @@ void Sequencer::run(bool from_timer) {
   }
 
   while (rate_limiter_.tryAcquireOne()) {
-    target_([this, now]() {
+    bool state = target_([this, &state, now]() {
       if (latency_callback_ != nullptr) {
         auto dur = std::chrono::high_resolution_clock::now() - now;
         latency_callback_(dur);
+        (void)state;
       }
       targets_completed_++;
     });
