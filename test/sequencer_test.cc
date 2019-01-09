@@ -1,7 +1,5 @@
 #include <chrono>
 
-#include "ares.h"
-
 #include "gtest/gtest.h"
 
 #include "test/mocks/event/mocks.h"
@@ -11,7 +9,6 @@
 #include "common/common/thread_impl.h"
 #include "common/event/dispatcher_impl.h"
 #include "common/event/real_time_system.h"
-#include "common/network/utility.h"
 #include "common/stats/isolated_store_impl.h"
 
 #include "nighthawk/common/exception.h"

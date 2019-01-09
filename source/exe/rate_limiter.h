@@ -20,10 +20,7 @@ protected:
 // instantiation.
 class LinearRateLimiter : public RateLimiter {
 public:
-  LinearRateLimiter(Envoy::TimeSource& time_source, std::chrono::microseconds pace)
-      : RateLimiter(time_source), acquireable_count_(0), acquired_count_(0), pace_(pace),
-        started_at_(time_source_.monotonicTime()) {}
-
+  LinearRateLimiter(Envoy::TimeSource& time_source, std::chrono::microseconds pace);
   virtual bool tryAcquireOne() override;
 
 private:

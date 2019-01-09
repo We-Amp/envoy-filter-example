@@ -1,6 +1,16 @@
 #include "exe/rate_limiter.h"
 
+#include "nighthawk/common/exception.h"
+
 namespace Nighthawk {
+
+LinearRateLimiter::LinearRateLimiter(Envoy::TimeSource& time_source, std::chrono::microseconds pace)
+    : RateLimiter(time_source), acquireable_count_(0), acquired_count_(0), pace_(pace),
+      started_at_(time_source_.monotonicTime()) {
+  if (pace.count() <= 0) {
+    throw NighthawkException("The pace argument should be greater then zero.");
+  }
+}
 
 bool LinearRateLimiter::tryAcquireOne() {
   if (acquireable_count_ > 0) {

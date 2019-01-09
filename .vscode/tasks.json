@@ -78,7 +78,7 @@
         {
             "label": "bazel-run-test",
             "type": "shell",
-            "command": "PATH=/usr/lib/llvm-7/bin:$PATH CC=clang CXX=clang++ bazel test  --cache_test_results=no -c dbg //test:nighthawk_test",
+            "command": "PATH=/usr/lib/llvm-7/bin:$PATH CC=clang CXX=clang++ bazel test  --cache_test_results=no -c fastbuild //test:nighthawk_test",
             "problemMatcher": [
                 "$gcc"
             ],
@@ -90,7 +90,7 @@
         {
             "label": "direct-run-test",
             "type": "shell",
-            "dependsOn": "debug-build-test",
+            "dependsOn": "build-test",
             "presentation": {
                 "echo": true,
                 "reveal": "always",
