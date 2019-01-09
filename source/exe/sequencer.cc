@@ -33,7 +33,8 @@ void Sequencer::run(bool from_timer) {
   // or less requests then anticipated based on rps * duration (seconds).
   if ((now - start_) > duration_) {
     if (targets_completed_ == targets_initiated_) {
-      ENVOY_LOG(info, "Sequencer done processing {} operations", targets_completed_);
+      ENVOY_LOG(info, "Sequencer done processing {} operations in {} ms.", targets_completed_,
+                std::chrono::duration_cast<std::chrono::milliseconds>(now - start_).count());
       dispatcher_.exit();
     } else {
       // We wait untill all due responses are in.

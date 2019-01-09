@@ -25,6 +25,7 @@ public:
   std::chrono::seconds timeout() const override { return std::chrono::seconds(timeout_); }
   std::string uri() const override { return uri_; }
   bool h2() const override { return h2_; }
+  std::string concurrency() const override { return concurrency_; }
 
 private:
   uint64_t requests_per_second_;
@@ -33,6 +34,7 @@ private:
   uint64_t timeout_;
   std::string uri_;
   bool h2_;
+  std::string concurrency_;
 };
 
 class NoServingException : public NighthawkException {

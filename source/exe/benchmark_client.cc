@@ -34,7 +34,7 @@ BenchmarkHttpClient::BenchmarkHttpClient(Envoy::Event::Dispatcher& dispatcher,
                                          bool use_h2)
     : dispatcher_(dispatcher), store_(store), time_source_(time_source),
       request_headers_(std::move(request_headers)), use_h2_(use_h2), is_https_(false), host_(""),
-      port_(0), path_("/"), dns_failure_(true), timeout_(5), max_connections_(1),
+      port_(0), path_("/"), dns_failure_(true), timeout_(5), connection_limit_(1),
       pool_connect_failures_(0), pool_overflow_failures_(0), stream_reset_count_(0),
       http_good_response_count_(0), http_bad_response_count_(0) {
 
@@ -64,7 +64,8 @@ BenchmarkHttpClient::BenchmarkHttpClient(Envoy::Event::Dispatcher& dispatcher,
 
 BenchmarkHttpClient::~BenchmarkHttpClient() {}
 
-void BenchmarkHttpClient::initialize(Envoy::Runtime::LoaderImpl& runtime) {
+// TODO(oschaaf): as we
+void BenchmarkHttpClient::syncResolveDns() {
   // TODO(oschaaf): ipv6, refactor dns stuff into separate call
   auto dns_resolver = dispatcher_.createDnsResolver({});
   Network::ActiveDnsQuery* active_dns_query_ = dns_resolver->resolve(
@@ -84,6 +85,10 @@ void BenchmarkHttpClient::initialize(Envoy::Runtime::LoaderImpl& runtime) {
       });
   // Wait for DNS resolution to complete before proceeding.
   dispatcher_.run(Envoy::Event::Dispatcher::RunType::Block);
+}
+
+void BenchmarkHttpClient::initialize(Envoy::Runtime::LoaderImpl& runtime) {
+  syncResolveDns();
 
   envoy::api::v2::Cluster cluster_config;
   envoy::api::v2::core::BindConfig bind_config;
@@ -92,7 +97,7 @@ void BenchmarkHttpClient::initialize(Envoy::Runtime::LoaderImpl& runtime) {
   auto thresholds = cluster_config.mutable_circuit_breakers()->add_thresholds();
 
   cluster_config.mutable_connect_timeout()->set_seconds(timeout_.count());
-  thresholds->mutable_max_connections()->set_value(max_connections_);
+  thresholds->mutable_max_connections()->set_value(connection_limit_);
 
   Envoy::Stats::ScopePtr scope = store_.createScope(fmt::format(
       "cluster.{}.", cluster_config.alt_stat_name().empty() ? cluster_config.name()

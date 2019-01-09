@@ -43,7 +43,12 @@ public:
   uint64_t http_good_response_count() { return http_good_response_count_; }
   uint64_t http_bad_response_count() { return http_bad_response_count_; }
 
+  void set_connection_limit(uint64_t connection_limit) { connection_limit_ = connection_limit; }
+  void set_connection_timeout(std::chrono::seconds timeout) { timeout_ = timeout; }
+
 private:
+  void syncResolveDns();
+
   Envoy::Event::Dispatcher& dispatcher_;
   Envoy::Stats::Store& store_;
   Envoy::TimeSource& time_source_;
@@ -57,7 +62,7 @@ private:
   bool dns_failure_;
   Envoy::Network::Address::InstanceConstSharedPtr target_address_;
   std::chrono::seconds timeout_;
-  uint64_t max_connections_;
+  uint64_t connection_limit_;
   uint64_t pool_connect_failures_;
   uint64_t pool_overflow_failures_;
   Envoy::Http::ConnectionPool::InstancePtr pool_;

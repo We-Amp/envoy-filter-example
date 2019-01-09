@@ -29,7 +29,7 @@ namespace {
 // returns 0 on failure. returns the number of HW CPU's
 // that the current thread has affinity with.
 // TODO(oschaaf): mull over what to do w/regard to hyperthreading.
-uint32_t determine_cpus_with_affinity() {
+uint32_t determine_cpu_cores_with_affinity() {
   uint32_t concurrency = 0;
   int i;
   pthread_t thread = pthread_self();
@@ -78,11 +78,20 @@ bool ClientMain::run() {
   auto logging_context = std::make_unique<Logger::Context>(
       spdlog::level::info, Logger::Logger::DEFAULT_LOG_FORMAT, log_lock);
 
-  uint32_t concurrency = determine_cpus_with_affinity();
-  if (concurrency == 0) {
+  uint32_t cpu_cores_with_affinity = determine_cpu_cores_with_affinity();
+  if (cpu_cores_with_affinity == 0) {
     ENVOY_LOG(warn, "Failed to determine the number of cpus with affinity to our thread.");
-    concurrency = std::thread::hardware_concurrency();
+    cpu_cores_with_affinity = std::thread::hardware_concurrency();
   }
+
+  bool autoscale = options_.concurrency() == "auto";
+  // TODO(oschaaf): concurrency is a string option, this needs more sanity checking.
+  // The default for concurrency is one, in which case these warnings cannot show up.
+  // TODO(oschaaf): Maybe, in the case where the concurrency flag is left out, but
+  // affinity is set / we don't have affinity with all cores, we should default to autoscale.
+  // (e.g. we are called via taskset).
+  uint32_t concurrency = autoscale ? cpu_cores_with_affinity : std::stoi(options_.concurrency());
+
   // We're going to fire up #concurrency benchmark loops and wait for them to complete.
   std::vector<Thread::ThreadPtr> threads;
   std::vector<std::vector<uint64_t>> global_results;
@@ -100,11 +109,23 @@ bool ClientMain::run() {
   uint64_t per_thread_connections = std::max(options_.connections() / concurrency, 1UL);
   uint64_t per_thread_rps = std::max(options_.requests_per_second() / concurrency, 1UL);
 
-  ENVOY_LOG(
-      info,
-      "Found {} (v)CPUs with affinity. Running {} event loops. Each will use {} connections and "
-      "target {} requests per second.",
-      concurrency, concurrency, per_thread_connections, per_thread_rps);
+  if (autoscale) {
+    ENVOY_LOG(info, "Detected {} (v)CPUs with affinity..", cpu_cores_with_affinity);
+  }
+
+  ENVOY_LOG(info, "Starting {} threads / event loops.", concurrency);
+
+  if ((options_.connections() % concurrency) != 0) {
+    ENVOY_LOG(warn, "The specified number of connections did not align to the concurrency level.");
+  }
+  if ((options_.requests_per_second() % concurrency) != 0) {
+    ENVOY_LOG(warn, "The specified queries per seconds did not align to the concurrency level.");
+  }
+
+  ENVOY_LOG(info,
+            "Using {} connections ({} total) and targetting {} requests per second ({} total).",
+            per_thread_connections, (per_thread_connections * concurrency), per_thread_rps,
+            (per_thread_rps * concurrency));
 
   for (uint32_t i = 0; i < concurrency; i++) {
     global_results.push_back(std::vector<uint64_t>());
@@ -132,6 +153,8 @@ bool ClientMain::run() {
       auto client =
           std::make_unique<BenchmarkHttpClient>(*dispatcher, *store, time_system, options_.uri(),
                                                 std::move(request_headers), options_.h2());
+      client->set_connection_timeout(options_.timeout());
+      client->set_connection_limit(options_.connections());
 
       client->initialize(runtime);
 
