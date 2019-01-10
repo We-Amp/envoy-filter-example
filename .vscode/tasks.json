@@ -138,9 +138,23 @@
             }
         },
         {
-            "label": "simple-valgrind-run",
+            "label": "simple-valgrind-run-direct",
             "type": "shell",
-            "command": "valgrind --leak-check=full --suppressions=envoy/tools/valgrind-suppressions.txt bazel-bin/nighthawk_client --rps 2 127.0.0.1:10001",
+            "dependsOn": "debug-build",
+            "command": "./valgrind.sh",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "valgrind-run-test-direct",
+            "type": "shell",
+            "dependsOn": "debug-build-test",
+            "command": "./valgrind-tests.sh",
             "problemMatcher": [
                 "$gcc"
             ],

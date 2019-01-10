@@ -130,7 +130,7 @@ bool ClientMain::run() {
     global_results.push_back(std::vector<uint64_t>());
     std::vector<uint64_t>& results = global_results.at(i);
     // TODO(oschaaf): refactor stats sink.
-    results.reserve(options_.duration().count() * per_thread_rps);
+    results.resize(options_.duration().count() * per_thread_rps);
 
     auto thread = thread_factory.createThread([&]() {
       auto store = std::make_unique<Envoy::Stats::IsolatedStoreImpl>();
@@ -160,7 +160,7 @@ bool ClientMain::run() {
       // With the linear rate limiter, we run an open-loop test, where we initiate new
       // calls regardless of the number of comletions we observe keeping up.
       LinearRateLimiter rate_limiter(time_system, 1000000us / per_thread_rps);
-      std::function<bool(std::function<void()>)> f =
+      SequencerTarget f =
           std::bind(&BenchmarkHttpClient::tryStartOne, client.get(), std::placeholders::_1);
       Sequencer sequencer(*dispatcher, time_system, rate_limiter, f,
                           std::chrono::seconds(options_.duration()));

@@ -39,7 +39,7 @@ void Sequencer::run(bool from_timer) {
     } else {
       // We wait untill all due responses are in.
       // TODO(oschaaf): 5s arbitrary grace timeout period should be a config option.
-      if (((now - start_) - duration_) > 5s) {
+      if (((now - start_) - duration_) > 30s) {
         ENVOY_LOG(warn,
                   "Sequencer timeout waiting for due responses. Initiated: {} / Completed: {}",
                   targets_initiated_, targets_completed_);
