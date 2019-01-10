@@ -99,7 +99,7 @@ TEST_F(BenchmarkClientTest, SequencedH2Test) {
 
   LinearRateLimiter rate_limiter(time_system_, 10ms);
   std::chrono::milliseconds duration(59ms);
-  Sequencer sequencer(*dispatcher_, time_system_, rate_limiter, f, duration);
+  Sequencer sequencer(*dispatcher_, time_system_, rate_limiter, f, duration, 1s);
 
   sequencer.start();
   sequencer.waitForCompletion();

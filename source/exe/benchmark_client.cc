@@ -138,8 +138,7 @@ bool BenchmarkHttpClient::tryStartOne(std::function<void()> caller_completion_ca
   auto stream_decoder = new Nighthawk::Http::StreamDecoder(caller_completion_callback, *this);
   auto cancellable = pool_->newStream(*stream_decoder, *this);
   (void)cancellable;
-  // TODO(oschaaf): double check this API. The happy flow works, but we probaly
-  // need work here.
+  // TODO(oschaaf): double check this.
   return true;
 }
 

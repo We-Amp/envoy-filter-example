@@ -46,7 +46,7 @@ TEST_F(SequencerTest, BasicTest) {
   std::function<bool(std::function<void()>)> f =
       std::bind(&SequencerTest::callback_test, this, std::placeholders::_1);
 
-  Sequencer sequencer(*dispatcher_, time_system_, rate_limiter, f, 1000ms);
+  Sequencer sequencer(*dispatcher_, time_system_, rate_limiter, f, 1s, 1s);
   sequencer.start();
   time_system_.setMonotonicTime(std::chrono::milliseconds(1000ms));
   sequencer.waitForCompletion();
@@ -58,8 +58,9 @@ TEST_F(SequencerTest, EmptyCallbackThrowsTest) {
   LinearRateLimiter rate_limiter(time_system_, 100ms);
   SequencerTarget callback_empty;
 
-  ASSERT_THROW(Sequencer sequencer(*dispatcher_, time_system_, rate_limiter, callback_empty, 1s),
-               NighthawkException);
+  ASSERT_THROW(
+      Sequencer sequencer(*dispatcher_, time_system_, rate_limiter, callback_empty, 1s, 1s),
+      NighthawkException);
 }
 
 } // namespace Nighthawk
