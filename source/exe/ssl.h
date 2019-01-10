@@ -117,12 +117,11 @@ class MClientSslSocketFactory : public Envoy::Network::TransportSocketFactory,
                                 public Envoy::Secret::SecretCallbacks,
                                 Envoy::Logger::Loggable<Envoy::Logger::Id::config> {
 public:
-  MClientSslSocketFactory(Envoy::Stats::Store& store, Envoy::TimeSource& time_source, bool h2) {
-    // TODO(oschaaf): check for leaks
-    Envoy::Ssl::ClientContextConfig* config = new MClientContextConfigImpl(h2);
+  MClientSslSocketFactory(Envoy::Stats::Store& store, Envoy::TimeSource& time_source, bool h2)
+      : config_(h2) {
     Envoy::Stats::ScopePtr scope = store.createScope(fmt::format("cluster.{}.", "ssl-client"));
     Envoy::Ssl::ClientContextSharedPtr context =
-        std::make_shared<Envoy::Ssl::ClientContextImpl>(*(scope.release()), *config, time_source);
+        std::make_shared<Envoy::Ssl::ClientContextImpl>(*(scope.release()), config_, time_source);
     ssl_ctx_ = context;
   }
 
@@ -141,6 +140,7 @@ public:
 
 private:
   Envoy::Ssl::ClientContextSharedPtr ssl_ctx_;
+  MClientContextConfigImpl config_;
 };
 
 } // namespace Ssl
