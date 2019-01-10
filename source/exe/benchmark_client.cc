@@ -68,16 +68,17 @@ BenchmarkHttpClient::~BenchmarkHttpClient() {}
 void BenchmarkHttpClient::syncResolveDns() {
   // TODO(oschaaf): ipv6, refactor dns stuff into separate call
   auto dns_resolver = dispatcher_.createDnsResolver({});
-  Network::ActiveDnsQuery* active_dns_query_ = dns_resolver->resolve(
-      host_, Network::DnsLookupFamily::V4Only,
+  Envoy::Network::ActiveDnsQuery* active_dns_query_ = dns_resolver->resolve(
+      host_, Envoy::Network::DnsLookupFamily::V4Only,
       [this, &active_dns_query_](
-          const std::list<Network::Address::InstanceConstSharedPtr>&& address_list) -> void {
+          const std::list<Envoy::Network::Address::InstanceConstSharedPtr>&& address_list) -> void {
         active_dns_query_ = nullptr;
         ENVOY_LOG(debug, "DNS resolution complete for {} ({} entries).", this->host_,
                   address_list.size());
         if (!address_list.empty()) {
           dns_failure_ = false;
-          target_address_ = Network::Utility::getAddressWithPort(*address_list.front(), port_);
+          target_address_ =
+              Envoy::Network::Utility::getAddressWithPort(*address_list.front(), port_);
         } else {
           ENVOY_LOG(critical, "Could not resolve host [{}]", host_);
         }
@@ -103,32 +104,33 @@ void BenchmarkHttpClient::initialize(Envoy::Runtime::LoaderImpl& runtime) {
       "cluster.{}.", cluster_config.alt_stat_name().empty() ? cluster_config.name()
                                                             : cluster_config.alt_stat_name()));
 
-  Network::TransportSocketFactoryPtr socket_factory;
+  Envoy::Network::TransportSocketFactoryPtr socket_factory;
   if (is_https_) {
-    socket_factory = Network::TransportSocketFactoryPtr{
+    socket_factory = Envoy::Network::TransportSocketFactoryPtr{
         new Ssl::MClientSslSocketFactory(store_, time_source_, use_h2_)};
   } else {
-    socket_factory = std::make_unique<Network::RawBufferSocketFactory>();
+    socket_factory = std::make_unique<Envoy::Network::RawBufferSocketFactory>();
   };
 
-  Envoy::Upstream::ClusterInfoConstSharedPtr cluster = std::make_unique<Upstream::ClusterInfoImpl>(
-      cluster_config, bind_config, runtime, std::move(socket_factory), std::move(scope),
-      false /*added_via_api*/);
+  Envoy::Upstream::ClusterInfoConstSharedPtr cluster =
+      std::make_unique<Envoy::Upstream::ClusterInfoImpl>(cluster_config, bind_config, runtime,
+                                                         std::move(socket_factory),
+                                                         std::move(scope), false /*added_via_api*/);
 
-  Network::ConnectionSocket::OptionsSharedPtr options =
-      std::make_shared<Network::ConnectionSocket::Options>();
+  Envoy::Network::ConnectionSocket::OptionsSharedPtr options =
+      std::make_shared<Envoy::Network::ConnectionSocket::Options>();
 
-  auto host = std::shared_ptr<Upstream::Host>{new Upstream::HostImpl(
+  auto host = std::shared_ptr<Envoy::Upstream::Host>{new Envoy::Upstream::HostImpl(
       cluster, host_, target_address_, envoy::api::v2::core::Metadata::default_instance(),
       1 /* weight */, envoy::api::v2::core::Locality(),
       envoy::api::v2::endpoint::Endpoint::HealthCheckConfig::default_instance(), 0)};
 
   if (use_h2_) {
     pool_ = std::make_unique<Envoy::Http::Http2::ProdConnPoolImpl>(
-        dispatcher_, host, Upstream::ResourcePriority::Default, options);
+        dispatcher_, host, Envoy::Upstream::ResourcePriority::Default, options);
   } else {
     pool_ = std::make_unique<Envoy::Http::Http1::ConnPoolImplProd>(
-        dispatcher_, host, Upstream::ResourcePriority::Default, options);
+        dispatcher_, host, Envoy::Upstream::ResourcePriority::Default, options);
   }
 }
 
@@ -141,7 +143,7 @@ bool BenchmarkHttpClient::tryStartOne(std::function<void()> caller_completion_ca
   return true;
 }
 
-void BenchmarkHttpClient::onComplete(bool success, const HeaderMap& headers) {
+void BenchmarkHttpClient::onComplete(bool success, const Envoy::Http::HeaderMap& headers) {
   if (!success) {
     stream_reset_count_++;
   } else {

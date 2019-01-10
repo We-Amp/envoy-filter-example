@@ -20,7 +20,6 @@
 #include "exe/sequencer.h"
 
 using namespace std::chrono_literals;
-using namespace Envoy;
 
 namespace Nighthawk {
 
@@ -55,7 +54,7 @@ ClientMain::ClientMain(int argc, const char* const* argv) : ClientMain(OptionsIm
 ClientMain::ClientMain(OptionsImpl options)
     : options_(options), time_system_(std::make_unique<Envoy::Event::RealTimeSystem>()) {
   ares_library_init(ARES_LIB_INIT_ALL);
-  Event::Libevent::Global::initialize();
+  Envoy::Event::Libevent::Global::initialize();
   configureComponentLogLevels();
 }
 
@@ -65,18 +64,18 @@ void ClientMain::configureComponentLogLevels() {
   // We rely on Envoy's logging infra.
   // TODO(oschaaf): Add options to tweak the log level of the various log tags
   // that are available.
-  Logger::Registry::setLogLevel(spdlog::level::info);
-  Logger::Logger* logger_to_change = Envoy::Logger::Registry::logger("main");
+  Envoy::Logger::Registry::setLogLevel(spdlog::level::info);
+  Envoy::Logger::Logger* logger_to_change = Envoy::Logger::Registry::logger("main");
   logger_to_change->setLevel(spdlog::level::info);
 }
 
 bool ClientMain::run() {
   // TODO(oschaaf): platform specificity need addressing.
-  auto thread_factory = Thread::ThreadFactoryImplPosix();
+  auto thread_factory = Envoy::Thread::ThreadFactoryImplPosix();
 
-  Thread::MutexBasicLockable log_lock;
-  auto logging_context = std::make_unique<Logger::Context>(
-      spdlog::level::info, Logger::Logger::DEFAULT_LOG_FORMAT, log_lock);
+  Envoy::Thread::MutexBasicLockable log_lock;
+  auto logging_context = std::make_unique<Envoy::Logger::Context>(
+      spdlog::level::info, Envoy::Logger::Logger::DEFAULT_LOG_FORMAT, log_lock);
 
   uint32_t cpu_cores_with_affinity = determine_cpu_cores_with_affinity();
   if (cpu_cores_with_affinity == 0) {
@@ -93,7 +92,7 @@ bool ClientMain::run() {
   uint32_t concurrency = autoscale ? cpu_cores_with_affinity : std::stoi(options_.concurrency());
 
   // We're going to fire up #concurrency benchmark loops and wait for them to complete.
-  std::vector<Thread::ThreadPtr> threads;
+  std::vector<Envoy::Thread::ThreadPtr> threads;
   std::vector<std::vector<uint64_t>> global_results;
   // TODO(oschaaf): rework this. We pre-allocate the global results vector
   // to avoid reallocations which would crash us.
@@ -134,7 +133,7 @@ bool ClientMain::run() {
     results.reserve(options_.duration().count() * per_thread_rps);
 
     auto thread = thread_factory.createThread([&]() {
-      auto store = std::make_unique<Stats::IsolatedStoreImpl>();
+      auto store = std::make_unique<Envoy::Stats::IsolatedStoreImpl>();
       auto api =
           std::make_unique<Envoy::Api::Impl>(1000ms /*flush interval*/, thread_factory, *store);
       auto dispatcher = api->allocateDispatcher(*time_system_);

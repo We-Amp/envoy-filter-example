@@ -20,7 +20,6 @@
 #include "exe/rate_limiter.h"
 #include "exe/sequencer.h"
 
-using namespace Envoy;
 using namespace std::chrono_literals;
 
 namespace Nighthawk {
@@ -32,7 +31,7 @@ public:
         dispatcher_(api_.allocateDispatcher(time_system_)), runtime_(generator_, store_, tls_) {}
   void SetUp() {
     ares_library_init(ARES_LIB_INIT_ALL);
-    Event::Libevent::Global::initialize();
+    Envoy::Event::Libevent::Global::initialize();
   }
   void TearDown() {
     tls_.shutdownGlobalThreading();

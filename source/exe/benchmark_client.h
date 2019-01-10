@@ -35,7 +35,7 @@ public:
                    Envoy::Upstream::HostDescriptionConstSharedPtr host) override;
 
   // StreamDecoderCompletionCallback
-  void onComplete(bool success, const HeaderMap& headers) override;
+  void onComplete(bool success, const Envoy::Http::HeaderMap& headers) override;
 
   uint64_t pool_connect_failures() { return pool_connect_failures_; }
   uint64_t pool_overflow_failures() { return pool_overflow_failures_; }

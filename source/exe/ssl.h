@@ -13,8 +13,6 @@
 
 #include "openssl/ssl.h" // TLS1_2_VERSION etc
 
-using namespace Envoy;
-
 namespace Nighthawk {
 namespace Ssl {
 
@@ -45,17 +43,17 @@ const std::string DEFAULT_ECDH_CURVES =
 
 namespace {
 // This SslSocket will be used when SSL secret is not fetched from SDS server.
-class MNotReadySslSocket : public Network::TransportSocket {
+class MNotReadySslSocket : public Envoy::Network::TransportSocket {
 public:
   // Network::TransportSocket
-  void setTransportSocketCallbacks(Network::TransportSocketCallbacks&) override {}
-  std::string protocol() const override { return EMPTY_STRING; }
+  void setTransportSocketCallbacks(Envoy::Network::TransportSocketCallbacks&) override {}
+  std::string protocol() const override { return Envoy::EMPTY_STRING; }
   bool canFlushClose() override { return true; }
-  void closeSocket(Network::ConnectionEvent) override {}
-  Network::IoResult doRead(Buffer::Instance&) override {
+  void closeSocket(Envoy::Network::ConnectionEvent) override {}
+  Envoy::Network::IoResult doRead(Envoy::Buffer::Instance&) override {
     return {Envoy::Network::PostIoAction::Close, 0, false};
   }
-  Network::IoResult doWrite(Buffer::Instance&, bool) override {
+  Envoy::Network::IoResult doWrite(Envoy::Buffer::Instance&, bool) override {
     return {Envoy::Network::PostIoAction::Close, 0, false};
   }
   void onConnected() override {}
@@ -115,9 +113,9 @@ private:
   Envoy::Ssl::CertificateValidationContextConfigPtr validation_context_config_;
 };
 
-class MClientSslSocketFactory : public Network::TransportSocketFactory,
-                                public Secret::SecretCallbacks,
-                                Logger::Loggable<Logger::Id::config> {
+class MClientSslSocketFactory : public Envoy::Network::TransportSocketFactory,
+                                public Envoy::Secret::SecretCallbacks,
+                                Envoy::Logger::Loggable<Envoy::Logger::Id::config> {
 public:
   MClientSslSocketFactory(Envoy::Stats::Store& store, Envoy::TimeSource& time_source, bool h2) {
     // TODO(oschaaf): check for leaks
@@ -128,8 +126,8 @@ public:
     ssl_ctx_ = context;
   }
 
-  Network::TransportSocketPtr createTransportSocket(
-      Network::TransportSocketOptionsSharedPtr transport_socket_options) const override {
+  Envoy::Network::TransportSocketPtr createTransportSocket(
+      Envoy::Network::TransportSocketOptionsSharedPtr transport_socket_options) const override {
     Envoy::Ssl::ClientContextSharedPtr ssl_ctx = ssl_ctx_;
     ASSERT(ssl_ctx);
     return std::make_unique<Envoy::Ssl::SslSocket>(

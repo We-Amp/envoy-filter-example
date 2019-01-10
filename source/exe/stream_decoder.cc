@@ -3,8 +3,6 @@
 #include "common/http/http1/codec_impl.h"
 #include "common/http/utility.h"
 
-using namespace Envoy;
-
 namespace Nighthawk {
 namespace Http {
 
@@ -17,7 +15,7 @@ void StreamDecoder::decodeHeaders(Envoy::Http::HeaderMapPtr&& headers, bool end_
   }
 }
 
-void StreamDecoder::decodeData(Buffer::Instance&, bool end_stream) {
+void StreamDecoder::decodeData(Envoy::Buffer::Instance&, bool end_stream) {
   ASSERT(!complete_);
   complete_ = end_stream;
   if (complete_) {
