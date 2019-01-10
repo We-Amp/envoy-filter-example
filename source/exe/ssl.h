@@ -1,7 +1,7 @@
 
 #pragma once
 
-// TODO(oschaaf): this doesn't actually validate anything. FIX!!
+// TODO(oschaaf): this doesn't actually validate certs. FIX!!
 
 #include "server/transport_socket_config_impl.h"
 
@@ -127,51 +127,22 @@ public:
         std::make_shared<Envoy::Ssl::ClientContextImpl>(*(scope.release()), *config, time_source);
     ssl_ctx_ = context;
   }
+
   Network::TransportSocketPtr createTransportSocket(
       Network::TransportSocketOptionsSharedPtr transport_socket_options) const override {
-    // onAddOrUpdateSecret() could be invoked in the middle of checking the existence of ssl_ctx and
-    // creating SslSocket using ssl_ctx. Capture ssl_ctx_ into a local variable so that we check and
-    // use the same ssl_ctx to create SslSocket.
-    Envoy::Ssl::ClientContextSharedPtr ssl_ctx;
-    {
-      absl::ReaderMutexLock l(&ssl_ctx_mu_);
-      //  ClientContextImpl(Stats::Scope& scope, const ClientContextConfig& config,
-      //              TimeSource& time_source);
-
-      // Envoy::Ssl::ClientContextSharedPtr context =
-      //    std::make_shared<Envoy::Ssl::ClientContextImpl>(scope, config, time_source_);
-      // removeEmptyContexts();
-      // contexts_.emplace_back(context);
-
-      ssl_ctx = ssl_ctx_;
-    }
-    if (ssl_ctx) {
-      return std::make_unique<Envoy::Ssl::SslSocket>(
-          std::move(ssl_ctx), Envoy::Ssl::InitialState::Client, transport_socket_options);
-    } else {
-      ENVOY_LOG(debug, "Create NotReadySslSocket");
-      return std::make_unique<MNotReadySslSocket>();
-    }
+    Envoy::Ssl::ClientContextSharedPtr ssl_ctx = ssl_ctx_;
+    ASSERT(ssl_ctx);
+    return std::make_unique<Envoy::Ssl::SslSocket>(
+        std::move(ssl_ctx), Envoy::Ssl::InitialState::Client, transport_socket_options);
   }
 
   bool implementsSecureTransport() const override { return true; };
 
   // Secret::SecretCallbacks
-  void onAddOrUpdateSecret() override {
-    ENVOY_LOG(debug, "Secret is updated.");
-    {
-      absl::WriterMutexLock l(&ssl_ctx_mu_);
-      // ssl_ctx_ = manager_.createSslClientContext(stats_scope_, *config_);
-    }
-  }
+  void onAddOrUpdateSecret() override { ENVOY_LOG(debug, "onAddOrUpdateSecret() called"); }
 
 private:
-  // Ssl::ContextManager& manager_;
-  // Stats::Scope& stats_scope_;
-  // SslSocketFactoryStats stats_;
-  // ClientContextConfigPtr config_;
-  mutable absl::Mutex ssl_ctx_mu_;
-  Envoy::Ssl::ClientContextSharedPtr ssl_ctx_ GUARDED_BY(ssl_ctx_mu_);
+  Envoy::Ssl::ClientContextSharedPtr ssl_ctx_;
 };
 
 } // namespace Ssl

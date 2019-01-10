@@ -34,8 +34,6 @@ TEST_F(RateLimiterTest, LinearRateLimiterTest) {
 
 TEST_F(RateLimiterTest, LinearRateLimiterInvalidArgumentTest) {
   Envoy::Event::SimulatedTimeSystem time_system;
-  // Construct a 10/second paced rate limiter.
-
   ASSERT_THROW(LinearRateLimiter rate_limiter(time_system, -100ms), NighthawkException);
 }
 
