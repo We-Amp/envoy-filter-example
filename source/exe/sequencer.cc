@@ -8,11 +8,11 @@ namespace Nighthawk {
 
 Sequencer::Sequencer(Envoy::Event::Dispatcher& dispatcher, Envoy::TimeSource& time_source,
                      RateLimiter& rate_limiter, SequencerTarget& target,
-                     std::chrono::microseconds duration)
+                     std::chrono::microseconds duration, std::chrono::microseconds grace_timeout)
     : dispatcher_(dispatcher), time_source_(time_source),
       timer_(dispatcher_.createTimer([this]() { run(true); })), rate_limiter_(rate_limiter),
-      target_(target), duration_(duration), start_(time_source.monotonicTime().min()),
-      targets_initiated_(0), targets_completed_(0) {
+      target_(target), duration_(duration), grace_timeout_(grace_timeout),
+      start_(time_source.monotonicTime().min()), targets_initiated_(0), targets_completed_(0) {
   if (target_ == nullptr) {
     throw NighthawkException("Sequencer must be constructed with a SequencerTarget.");
   }
@@ -38,8 +38,7 @@ void Sequencer::run(bool from_timer) {
       dispatcher_.exit();
     } else {
       // We wait untill all due responses are in.
-      // TODO(oschaaf): 5s arbitrary grace timeout period should be a config option.
-      if (((now - start_) - duration_) > 30s) {
+      if (((now - start_) - duration_) > grace_timeout_) {
         ENVOY_LOG(warn,
                   "Sequencer timeout waiting for due responses. Initiated: {} / Completed: {}",
                   targets_initiated_, targets_completed_);

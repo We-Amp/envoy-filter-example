@@ -162,8 +162,8 @@ bool ClientMain::run() {
       LinearRateLimiter rate_limiter(time_system, 1000000us / per_thread_rps);
       SequencerTarget f =
           std::bind(&BenchmarkHttpClient::tryStartOne, client.get(), std::placeholders::_1);
-      Sequencer sequencer(*dispatcher, time_system, rate_limiter, f,
-                          std::chrono::seconds(options_.duration()));
+      Sequencer sequencer(*dispatcher, time_system, rate_limiter, f, options_.duration(),
+                          options_.timeout());
 
       sequencer.set_latency_callback([&results](std::chrono::nanoseconds latency) {
         ASSERT(latency.count() > 0);
