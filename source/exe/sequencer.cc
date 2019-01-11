@@ -49,8 +49,9 @@ void Sequencer::run(bool from_timer) {
     return;
   }
 
-  while (rate_limiter_.tryAcquireOne()) {
-    target_([this, now]() {
+  bool ok = true;
+  while (rate_limiter_.tryAcquireOne() && ok) {
+    ok = target_([this, now]() {
       if (latency_callback_ != nullptr) {
         auto dur = time_source_.monotonicTime() - now;
         latency_callback_(dur);

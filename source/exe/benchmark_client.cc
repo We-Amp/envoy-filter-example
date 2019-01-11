@@ -116,16 +116,15 @@ void BenchmarkHttpClient::initialize(Envoy::Runtime::LoaderImpl& runtime) {
     socket_factory = std::make_unique<Envoy::Network::RawBufferSocketFactory>();
   };
 
-  Envoy::Upstream::ClusterInfoConstSharedPtr cluster =
-      std::make_unique<Envoy::Upstream::ClusterInfoImpl>(cluster_config, bind_config, runtime,
-                                                         std::move(socket_factory),
-                                                         std::move(scope), false /*added_via_api*/);
+  cluster_ = std::make_unique<Envoy::Upstream::ClusterInfoImpl>(
+      cluster_config, bind_config, runtime, std::move(socket_factory), std::move(scope),
+      false /*added_via_api*/);
 
   Envoy::Network::ConnectionSocket::OptionsSharedPtr options =
       std::make_shared<Envoy::Network::ConnectionSocket::Options>();
 
   auto host = std::shared_ptr<Envoy::Upstream::Host>{new Envoy::Upstream::HostImpl(
-      cluster, host_, target_address_, envoy::api::v2::core::Metadata::default_instance(),
+      cluster_, host_, target_address_, envoy::api::v2::core::Metadata::default_instance(),
       1 /* weight */, envoy::api::v2::core::Locality(),
       envoy::api::v2::endpoint::Endpoint::HealthCheckConfig::default_instance(), 0)};
 
@@ -138,9 +137,19 @@ void BenchmarkHttpClient::initialize(Envoy::Runtime::LoaderImpl& runtime) {
   }
 }
 
-void BenchmarkHttpClient::startOne(std::function<void()> caller_completion_callback) {
+bool BenchmarkHttpClient::tryStartOne(std::function<void()> caller_completion_callback) {
   auto stream_decoder = new Nighthawk::Http::StreamDecoder(caller_completion_callback, *this);
-  pool_->newStream(*stream_decoder, *this);
+
+  bool cx_overflow = cluster_->stats().upstream_cx_overflow_.value();
+  bool pending_overflow = cluster_->stats().upstream_rq_pending_overflow_.value();
+
+  Envoy::Http::ConnectionPool::Cancellable* cancellable = pool_->newStream(*stream_decoder, *this);
+
+  if (cancellable == nullptr) {
+    return cx_overflow == cluster_->stats().upstream_cx_overflow_.value() &&
+           pending_overflow == cluster_->stats().upstream_rq_pending_overflow_.value();
+  }
+  return true;
 }
 
 void BenchmarkHttpClient::onComplete(bool success, const Envoy::Http::HeaderMap& headers) {

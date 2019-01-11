@@ -26,7 +26,7 @@ public:
   ~BenchmarkHttpClient();
 
   void initialize(Envoy::Runtime::LoaderImpl& runtime);
-  void startOne(std::function<void()> caller_completion_callback);
+  bool tryStartOne(std::function<void()> caller_completion_callback);
 
   // ConnectionPool::Callbacks
   void onPoolFailure(Envoy::Http::ConnectionPool::PoolFailureReason reason,
@@ -56,6 +56,7 @@ private:
   Envoy::Stats::Store& store_;
   Envoy::TimeSource& time_source_;
   Envoy::Http::HeaderMapImplPtr request_headers_;
+  Envoy::Upstream::ClusterInfoConstSharedPtr cluster_;
   bool use_h2_;
 
   bool is_https_;

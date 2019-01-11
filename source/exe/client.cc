@@ -161,7 +161,7 @@ bool ClientMain::run() {
       // calls regardless of the number of comletions we observe keeping up.
       LinearRateLimiter rate_limiter(time_system, 1000000us / per_thread_rps);
       SequencerTarget f =
-          std::bind(&BenchmarkHttpClient::startOne, client.get(), std::placeholders::_1);
+          std::bind(&BenchmarkHttpClient::tryStartOne, client.get(), std::placeholders::_1);
       Sequencer sequencer(*dispatcher, time_system, rate_limiter, f, options_.duration(),
                           options_.timeout());
 

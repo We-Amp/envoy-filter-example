@@ -24,9 +24,10 @@ public:
       : api_(1000ms /*flush interval*/, thread_factory_, store_),
         dispatcher_(api_.allocateDispatcher(time_system_)), callback_test_count_(0) {}
 
-  void callback_test(std::function<void()> f) {
+  bool callback_test(std::function<void()> f) {
     callback_test_count_++;
     f();
+    return true;
   }
 
   void SetUp() { time_system_.setMonotonicTime(0ms); }

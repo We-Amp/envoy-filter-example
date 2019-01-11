@@ -74,7 +74,7 @@ TEST_F(BenchmarkClientTest, BasicTestH1WithRequestQueue) {
   };
 
   for (int i = 0; i < amount; i++) {
-    client.startOne(f);
+    client.tryStartOne(f);
   }
 
   dispatcher_->run(Envoy::Event::Dispatcher::RunType::Block);
@@ -108,7 +108,7 @@ TEST_F(BenchmarkClientTest, BasicTestH1WithoutRequestQueue) {
   };
 
   for (uint64_t i = 0; i < amount; i++) {
-    client.startOne(f);
+    client.tryStartOne(f);
   }
 
   dispatcher_->run(Envoy::Event::Dispatcher::RunType::Block);
@@ -132,7 +132,7 @@ TEST_F(BenchmarkClientTest, SequencedH2Test) {
   client.initialize(runtime_);
 
   // TODO(oschaaf): create an interface that pulls this from implementations upon implementation.
-  SequencerTarget f = std::bind(&BenchmarkHttpClient::startOne, &client, std::placeholders::_1);
+  SequencerTarget f = std::bind(&BenchmarkHttpClient::tryStartOne, &client, std::placeholders::_1);
 
   LinearRateLimiter rate_limiter(time_system_, 10ms);
   std::chrono::milliseconds duration(59ms);
