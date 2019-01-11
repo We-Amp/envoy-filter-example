@@ -36,7 +36,7 @@ void Sequencer::run(bool from_timer) {
                 std::chrono::duration_cast<std::chrono::milliseconds>(now - start_).count());
       dispatcher_.exit();
     } else {
-      // We wait untill all due responses are in.
+      // We wait untill all due responses are in or the grace period times out.
       if (((now - start_) - duration_) > grace_timeout_) {
         ENVOY_LOG(warn,
                   "Sequencer timeout waiting for due responses. Initiated: {} / Completed: {}",

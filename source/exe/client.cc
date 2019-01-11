@@ -99,38 +99,26 @@ bool ClientMain::run() {
   // Wire up a proper stats sink.
   global_results.reserve(concurrency);
 
-  // TODO(oschaaf): as we spread the tasks accross workers, numbers may not always align
-  // well. We may want to warn about that, or fix it so that we do reach the ancipated amount
-  // of request/responses in the happy flow (~rps * duration in seconds).
-  // TODO(oschaaf): we actually may not want to do this, consider removing this
-  // and delegate adding up the numbers to the user as concurrency increases.
-  // Perhaps default to a single event loop when we do.
-  uint64_t per_thread_connections = std::max(options_.connections() / concurrency, 1UL);
-  uint64_t per_thread_rps = std::max(options_.requests_per_second() / concurrency, 1UL);
-
   if (autoscale) {
     ENVOY_LOG(info, "Detected {} (v)CPUs with affinity..", cpu_cores_with_affinity);
   }
 
   ENVOY_LOG(info, "Starting {} threads / event loops.", concurrency);
+  ENVOY_LOG(info, "Global targets: {} connections and {} calls per second.",
+            options_.connections() * concurrency, options_.requests_per_second() * concurrency);
 
-  if ((options_.connections() % concurrency) != 0) {
-    ENVOY_LOG(warn, "The specified number of connections did not align to the concurrency level.");
+  if (concurrency > 1) {
+    ENVOY_LOG(info, "   (Per-worker targets: {} connections and {} calls per second)",
+              options_.connections(), options_.requests_per_second());
   }
-  if ((options_.requests_per_second() % concurrency) != 0) {
-    ENVOY_LOG(warn, "The specified queries per seconds did not align to the concurrency level.");
-  }
-
-  ENVOY_LOG(info,
-            "Using {} connections ({} total) and targetting {} requests per second ({} total).",
-            per_thread_connections, (per_thread_connections * concurrency), per_thread_rps,
-            (per_thread_rps * concurrency));
 
   for (uint32_t i = 0; i < concurrency; i++) {
     global_results.push_back(std::vector<uint64_t>());
     std::vector<uint64_t>& results = global_results.at(i);
-    // TODO(oschaaf): refactor stats sink.
-    results.resize(options_.duration().count() * per_thread_rps);
+    // TODO(oschaaf): get us a stats sink.
+
+    // This results on lots of valgrind complaints, unfortunately.
+    results.reserve(options_.duration().count() * options_.requests_per_second());
 
     auto thread = thread_factory.createThread([&]() {
       auto store = std::make_unique<Envoy::Stats::IsolatedStoreImpl>();
@@ -159,7 +147,7 @@ bool ClientMain::run() {
 
       // With the linear rate limiter, we run an open-loop test, where we initiate new
       // calls regardless of the number of comletions we observe keeping up.
-      LinearRateLimiter rate_limiter(time_system, 1000000us / per_thread_rps);
+      LinearRateLimiter rate_limiter(time_system, 1000000us / options_.requests_per_second());
       SequencerTarget f =
           std::bind(&BenchmarkHttpClient::tryStartOne, client.get(), std::placeholders::_1);
       Sequencer sequencer(*dispatcher, time_system, rate_limiter, f, options_.duration(),
@@ -178,6 +166,8 @@ bool ClientMain::run() {
                 client->pool_connect_failures(), client->pool_overflow_failures(),
                 client->http_good_response_count(), client->http_bad_response_count(),
                 client->stream_reset_count());
+      // As we prevent pool overflow failures, we don't expect any.
+      ASSERT(!client->pool_overflow_failures());
       client.reset();
       // TODO(oschaaf): shouldn't be doing this here.
       tls.shutdownGlobalThreading();
