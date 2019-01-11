@@ -6,20 +6,35 @@ namespace Nighthawk {
 
 OptionsImpl::OptionsImpl(int argc, const char* const* argv) {
   TCLAP::CmdLine cmd("benchmarking", ' ', "PoC");
-  TCLAP::ValueArg<uint64_t> requests_per_second("", "rps", "target requests per second", false,
-                                                5 /*default qps*/, "uint64_t", cmd);
-  TCLAP::ValueArg<uint64_t> connections("", "connections", "number of connections to use", false, 1,
-                                        "uint64_t", cmd);
-  TCLAP::ValueArg<uint64_t> duration("", "duration", "duration (seconds)", false, 5, "uint64_t",
-                                     cmd);
-  TCLAP::ValueArg<uint64_t> timeout("", "timeout", "timeout (seconds)", false, 5, "uint64_t", cmd);
+  TCLAP::ValueArg<uint64_t> requests_per_second("", "rps",
+                                                "The target requests-per-second rate. Default: 5.",
+                                                false, 5 /*default qps*/, "uint64_t", cmd);
+  TCLAP::ValueArg<uint64_t> connections("", "connections",
+                                        "The number of connections that the test should maximally "
+                                        "use. Default: 1.",
+                                        false, 1, "uint64_t", cmd);
+  TCLAP::ValueArg<uint64_t> duration("", "duration",
+                                     "The number of seconds that the test should run. Default: 5.",
+                                     false, 5, "uint64_t", cmd);
+  TCLAP::ValueArg<uint64_t> timeout(
+      "", "timeout",
+      "Timeout period in seconds used for both connection timeout and grace period waiting for "
+      "lagging responses to come in after the test run is done. Default: 5.",
+      false, 5, "uint64_t", cmd);
 
-  TCLAP::SwitchArg h2("", "h2", "Use h2", cmd);
+  TCLAP::SwitchArg h2("", "h2", "Use HTTP/2", cmd);
 
-  TCLAP::ValueArg<std::string> concurrency("", "concurrency", "concurrency (seconds)", false, "1",
-                                           "int64_t", cmd);
+  TCLAP::ValueArg<std::string> concurrency(
+      "", "concurrency",
+      "The number of concurrent event loops that should be used. Specify 'auto' to let nighthawk "
+      "run leverage all (aligned) vCPUs. Note that increasing this effectively multiplies "
+      "configured --rps and --connection values. Default: 1.",
+      false, "1", "string", cmd);
 
-  TCLAP::UnlabeledValueArg<std::string> uri("uri", "uri to benchmark", true, "", "uri format", cmd);
+  TCLAP::UnlabeledValueArg<std::string> uri("uri",
+                                            "uri to benchmark. http:// and https:// are supported, "
+                                            "but in case of https no certificates are validated.",
+                                            true, "", "uri format", cmd);
 
   cmd.setExceptionHandling(false);
   try {
