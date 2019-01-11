@@ -57,15 +57,16 @@ TEST_F(BenchmarkClientTest, BasicTestH1WithRequestQueue) {
   BenchmarkHttpClient client(*dispatcher_, store_, time_system_, "http://127.0.0.1/",
                              std::move(request_headers), false /*use h2*/);
 
+  int amount = 10;
+  int inflight_response_count = 0;
+
   // Allow  request queueing so we can queue up everything all at once.
   client.set_connection_timeout(1s);
-  client.set_max_pending_requests(10);
-  client.initialize(runtime_);
+  client.set_max_pending_requests(amount);
+
   // TODO(oschaaf): either get rid of the intialize call, or test that we except
   // when we didn't call it before calling tryStartOne().  client.initialize(runtime_);
-
-  int amount = 10;
-  int inflight_response_count = amount;
+  client.initialize(runtime_);
 
   std::function<void()> f = [this, &inflight_response_count]() {
     if (--inflight_response_count == 0) {
@@ -74,8 +75,12 @@ TEST_F(BenchmarkClientTest, BasicTestH1WithRequestQueue) {
   };
 
   for (int i = 0; i < amount; i++) {
-    client.tryStartOne(f);
+    if (client.tryStartOne(f)) {
+      inflight_response_count++;
+    }
   }
+
+  EXPECT_EQ(amount, inflight_response_count);
 
   dispatcher_->run(Envoy::Event::Dispatcher::RunType::Block);
 
@@ -98,26 +103,31 @@ TEST_F(BenchmarkClientTest, BasicTestH1WithoutRequestQueue) {
   client.initialize(runtime_);
 
   uint64_t amount = 10;
-  int inflight_response_count = amount;
+  uint64_t inflight_response_count = 0;
 
-  std::function<void()> f = [this, &client, &inflight_response_count, amount]() {
+  std::function<void()> f = [this, &inflight_response_count]() {
     --inflight_response_count;
-    if ((client.http_good_response_count() + client.pool_overflow_failures()) == amount) {
+    if (inflight_response_count == 0) {
       dispatcher_->exit();
     }
   };
 
   for (uint64_t i = 0; i < amount; i++) {
-    client.tryStartOne(f);
+    if (client.tryStartOne(f)) {
+      inflight_response_count++;
+    }
   }
+
+  EXPECT_EQ(1, inflight_response_count);
 
   dispatcher_->run(Envoy::Event::Dispatcher::RunType::Block);
 
-  EXPECT_EQ(9, inflight_response_count);
+  EXPECT_EQ(0, inflight_response_count);
   EXPECT_EQ(0, client.pool_connect_failures());
   EXPECT_EQ(0, client.http_bad_response_count());
   EXPECT_EQ(0, client.stream_reset_count());
-  EXPECT_EQ(amount - 1, client.pool_overflow_failures());
+  // We throttle before the pool, so we expect no pool overflows.
+  EXPECT_EQ(0, client.pool_overflow_failures());
   EXPECT_EQ(1, client.http_good_response_count());
 }
 

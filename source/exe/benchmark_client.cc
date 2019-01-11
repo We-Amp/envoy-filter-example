@@ -138,17 +138,29 @@ void BenchmarkHttpClient::initialize(Envoy::Runtime::LoaderImpl& runtime) {
 }
 
 bool BenchmarkHttpClient::tryStartOne(std::function<void()> caller_completion_callback) {
+  if (!cluster_->resourceManager(Envoy::Upstream::ResourcePriority::Default)
+           .pendingRequests()
+           .canCreate()) {
+    return false;
+  }
+  /*
+    if (!cluster_->resourceManager(Envoy::Upstream::ResourcePriority::Default)
+             .connections()
+             .canCreate()) {
+      return false;
+    }*/
+
   auto stream_decoder = new Nighthawk::Http::StreamDecoder(caller_completion_callback, *this);
 
-  bool cx_overflow = cluster_->stats().upstream_cx_overflow_.value();
-  bool pending_overflow = cluster_->stats().upstream_rq_pending_overflow_.value();
+  //  bool cx_overflow = cluster_->stats().upstream_cx_overflow_.value();
+  //  bool pending_overflow = cluster_->stats().upstream_rq_pending_overflow_.value();
 
-  Envoy::Http::ConnectionPool::Cancellable* cancellable = pool_->newStream(*stream_decoder, *this);
+  pool_->newStream(*stream_decoder, *this);
 
-  if (cancellable == nullptr) {
-    return cx_overflow == cluster_->stats().upstream_cx_overflow_.value() &&
-           pending_overflow == cluster_->stats().upstream_rq_pending_overflow_.value();
-  }
+  //  if (cancellable == nullptr) {
+  // return cx_overflow == cluster_->stats().upstream_cx_overflow_.value() &&
+  // pending_overflow == cluster_->stats().upstream_rq_pending_overflow_.value();
+  //}
   return true;
 }
 
