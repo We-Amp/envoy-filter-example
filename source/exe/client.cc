@@ -147,7 +147,7 @@ bool ClientMain::run() {
 
       // With the linear rate limiter, we run an open-loop test, where we initiate new
       // calls regardless of the number of comletions we observe keeping up.
-      LinearRateLimiter rate_limiter(time_system, 1000000us / options_.requests_per_second());
+      LinearRateLimiter rate_limiter(time_system, 1000000000ns / options_.requests_per_second());
       SequencerTarget f =
           std::bind(&BenchmarkHttpClient::tryStartOne, client.get(), std::placeholders::_1);
       Sequencer sequencer(*dispatcher, time_system, rate_limiter, f, options_.duration(),

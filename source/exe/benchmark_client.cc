@@ -66,9 +66,7 @@ BenchmarkHttpClient::BenchmarkHttpClient(Envoy::Event::Dispatcher& dispatcher,
 
 BenchmarkHttpClient::~BenchmarkHttpClient() {}
 
-// TODO(oschaaf): as we
 void BenchmarkHttpClient::syncResolveDns() {
-  // TODO(oschaaf): ipv6, refactor dns stuff into separate call
   auto dns_resolver = dispatcher_.createDnsResolver({});
   Envoy::Network::ActiveDnsQuery* active_dns_query_ = dns_resolver->resolve(
       host_, Envoy::Network::DnsLookupFamily::V4Only,

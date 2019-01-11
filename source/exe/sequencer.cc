@@ -57,9 +57,8 @@ void Sequencer::run(bool from_timer) {
     return;
   }
 
-  bool ok = true;
-  while (rate_limiter_.tryAcquireOne() && ok) {
-    ok = target_([this, now]() {
+  while (rate_limiter_.tryAcquireOne()) {
+    bool ok = target_([this, now]() {
       if (latency_callback_ != nullptr) {
         auto dur = time_source_.monotonicTime() - now;
         latency_callback_(dur);
@@ -67,7 +66,12 @@ void Sequencer::run(bool from_timer) {
       targets_completed_++;
       run(false);
     });
-    targets_initiated_++;
+    if (ok) {
+      targets_initiated_++;
+    } else {
+      rate_limiter_.releaseOne();
+      break;
+    }
   }
 
   if (from_timer) {
