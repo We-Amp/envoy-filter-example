@@ -37,7 +37,7 @@ BenchmarkHttpClient::BenchmarkHttpClient(Envoy::Event::Dispatcher& dispatcher,
     : dispatcher_(dispatcher), store_(store), time_source_(time_source),
       request_headers_(std::move(request_headers)), use_h2_(use_h2), is_https_(false), host_(""),
       port_(0), path_("/"), dns_failure_(true), timeout_(5s), connection_limit_(1),
-      max_pending_requests_(10), pool_connect_failures_(0), pool_overflow_failures_(0),
+      max_pending_requests_(1), pool_connect_failures_(0), pool_overflow_failures_(0),
       stream_reset_count_(0), http_good_response_count_(0), http_bad_response_count_(0) {
 
   // parse incoming uri into fields that we need.

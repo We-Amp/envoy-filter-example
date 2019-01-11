@@ -31,20 +31,28 @@ void Sequencer::run(bool from_timer) {
   // We put a cap on duration here. Which means we do not care care if we initiate/complete more
   // or less requests then anticipated based on rps * duration (seconds).
   if ((now - start_) > duration_) {
+    auto rate = targets_completed_ /
+                (std::chrono::duration_cast<std::chrono::seconds>(now - start_).count() * 1.00);
+
     if (targets_completed_ == targets_initiated_) {
-      ENVOY_LOG(info, "Sequencer done processing {} operations in {} ms.", targets_completed_,
-                std::chrono::duration_cast<std::chrono::milliseconds>(now - start_).count());
+      ENVOY_LOG(info,
+                "Sequencer done processing {} operations in {} ms. (completion rate {}/second.)",
+                targets_completed_,
+                std::chrono::duration_cast<std::chrono::milliseconds>(now - start_).count(), rate);
       dispatcher_.exit();
     } else {
       // We wait untill all due responses are in or the grace period times out.
       if (((now - start_) - duration_) > grace_timeout_) {
         ENVOY_LOG(warn,
-                  "Sequencer timeout waiting for due responses. Initiated: {} / Completed: {}",
-                  targets_initiated_, targets_completed_);
+                  "Sequencer timeout waiting for due responses. Initiated: {} / Completed: {}. "
+                  "(completion ~ rate {}/second.)",
+                  targets_initiated_, targets_completed_, rate);
         dispatcher_.exit();
         return;
       }
-      scheduleRun();
+      if (from_timer) {
+        scheduleRun();
+      }
     }
     return;
   }
@@ -57,6 +65,7 @@ void Sequencer::run(bool from_timer) {
         latency_callback_(dur);
       }
       targets_completed_++;
+      run(false);
     });
     targets_initiated_++;
   }
