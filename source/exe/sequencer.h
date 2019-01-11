@@ -11,7 +11,7 @@
 namespace Nighthawk {
 
 // TODO(oschaaf): consider renaming this to BenchmarkTarget or some such.
-typedef std::function<bool(std::function<void()>)> SequencerTarget;
+typedef std::function<void(std::function<void()>)> SequencerTarget;
 
 // TODO(oschaaf): consider renaming this to benchmarker some such.
 class Sequencer : public Envoy::Logger::Loggable<Envoy::Logger::Id::main> {

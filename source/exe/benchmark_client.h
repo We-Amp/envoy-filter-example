@@ -26,7 +26,7 @@ public:
   ~BenchmarkHttpClient();
 
   void initialize(Envoy::Runtime::LoaderImpl& runtime);
-  bool tryStartOne(std::function<void()> caller_completion_callback);
+  void startOne(std::function<void()> caller_completion_callback);
 
   // ConnectionPool::Callbacks
   void onPoolFailure(Envoy::Http::ConnectionPool::PoolFailureReason reason,
@@ -45,6 +45,9 @@ public:
 
   void set_connection_limit(uint64_t connection_limit) { connection_limit_ = connection_limit; }
   void set_connection_timeout(std::chrono::seconds timeout) { timeout_ = timeout; }
+  void set_max_pending_requests(uint64_t max_pending_requests) {
+    max_pending_requests_ = max_pending_requests;
+  }
 
 private:
   void syncResolveDns();
@@ -63,6 +66,7 @@ private:
   Envoy::Network::Address::InstanceConstSharedPtr target_address_;
   std::chrono::seconds timeout_;
   uint64_t connection_limit_;
+  uint64_t max_pending_requests_;
   uint64_t pool_connect_failures_;
   uint64_t pool_overflow_failures_;
   Envoy::Http::ConnectionPool::InstancePtr pool_;
@@ -71,6 +75,6 @@ private:
   uint64_t stream_reset_count_;
   uint64_t http_good_response_count_;
   uint64_t http_bad_response_count_;
-};
+}; // namespace Nighthawk
 
 } // namespace Nighthawk

@@ -25,6 +25,8 @@
 #include "exe/ssl.h"
 #include "exe/stream_decoder.h"
 
+using namespace std::chrono_literals;
+
 namespace Nighthawk {
 
 BenchmarkHttpClient::BenchmarkHttpClient(Envoy::Event::Dispatcher& dispatcher,
@@ -34,9 +36,9 @@ BenchmarkHttpClient::BenchmarkHttpClient(Envoy::Event::Dispatcher& dispatcher,
                                          bool use_h2)
     : dispatcher_(dispatcher), store_(store), time_source_(time_source),
       request_headers_(std::move(request_headers)), use_h2_(use_h2), is_https_(false), host_(""),
-      port_(0), path_("/"), dns_failure_(true), timeout_(5), connection_limit_(1),
-      pool_connect_failures_(0), pool_overflow_failures_(0), stream_reset_count_(0),
-      http_good_response_count_(0), http_bad_response_count_(0) {
+      port_(0), path_("/"), dns_failure_(true), timeout_(5s), connection_limit_(1),
+      max_pending_requests_(10), pool_connect_failures_(0), pool_overflow_failures_(0),
+      stream_reset_count_(0), http_good_response_count_(0), http_bad_response_count_(0) {
 
   // parse incoming uri into fields that we need.
   // TODO(oschaaf): refactor. also input validation, etc.
@@ -98,7 +100,9 @@ void BenchmarkHttpClient::initialize(Envoy::Runtime::LoaderImpl& runtime) {
   auto thresholds = cluster_config.mutable_circuit_breakers()->add_thresholds();
 
   cluster_config.mutable_connect_timeout()->set_seconds(timeout_.count());
+  thresholds->mutable_max_retries()->set_value(0);
   thresholds->mutable_max_connections()->set_value(connection_limit_);
+  thresholds->mutable_max_pending_requests()->set_value(max_pending_requests_);
 
   Envoy::Stats::ScopePtr scope = store_.createScope(fmt::format(
       "cluster.{}.", cluster_config.alt_stat_name().empty() ? cluster_config.name()
@@ -134,12 +138,9 @@ void BenchmarkHttpClient::initialize(Envoy::Runtime::LoaderImpl& runtime) {
   }
 }
 
-bool BenchmarkHttpClient::tryStartOne(std::function<void()> caller_completion_callback) {
+void BenchmarkHttpClient::startOne(std::function<void()> caller_completion_callback) {
   auto stream_decoder = new Nighthawk::Http::StreamDecoder(caller_completion_callback, *this);
-  auto cancellable = pool_->newStream(*stream_decoder, *this);
-  (void)cancellable;
-  // TODO(oschaaf): double check this.
-  return true;
+  pool_->newStream(*stream_decoder, *this);
 }
 
 void BenchmarkHttpClient::onComplete(bool success, const Envoy::Http::HeaderMap& headers) {

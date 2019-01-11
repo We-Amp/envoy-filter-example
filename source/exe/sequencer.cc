@@ -28,7 +28,6 @@ void Sequencer::scheduleRun() { timer_->enableTimer(1ms); }
 
 void Sequencer::run(bool from_timer) {
   auto now = time_source_.monotonicTime();
-
   // We put a cap on duration here. Which means we do not care care if we initiate/complete more
   // or less requests then anticipated based on rps * duration (seconds).
   if ((now - start_) > duration_) {
@@ -51,11 +50,10 @@ void Sequencer::run(bool from_timer) {
   }
 
   while (rate_limiter_.tryAcquireOne()) {
-    bool state = target_([this, &state, now]() {
+    target_([this, now]() {
       if (latency_callback_ != nullptr) {
         auto dur = time_source_.monotonicTime() - now;
         latency_callback_(dur);
-        (void)state;
       }
       targets_completed_++;
     });

@@ -51,15 +51,18 @@ public:
 // TODO(oschaaf): this is a very,very crude end-to-end test.
 // Needs to be refactored and needs a synthetic origin to test
 // against. also, we need more tests.
-TEST_F(BenchmarkClientTest, BasicTestH1) {
+TEST_F(BenchmarkClientTest, BasicTestH1WithRequestQueue) {
   Envoy::Http::HeaderMapImplPtr request_headers = std::make_unique<Envoy::Http::HeaderMapImpl>();
   request_headers->insertMethod().value(Envoy::Http::Headers::get().MethodValues.Get);
   BenchmarkHttpClient client(*dispatcher_, store_, time_system_, "http://127.0.0.1/",
                              std::move(request_headers), false /*use h2*/);
 
-  // TODO(oschaaf): either get rid of the intialize call, or test that we except
-  // when we didn't call it before calling tryStartOne().
+  // Allow  request queueing so we can queue up everything all at once.
+  client.set_connection_timeout(1s);
+  client.set_max_pending_requests(10);
   client.initialize(runtime_);
+  // TODO(oschaaf): either get rid of the intialize call, or test that we except
+  // when we didn't call it before calling tryStartOne().  client.initialize(runtime_);
 
   int amount = 10;
   int inflight_response_count = amount;
@@ -71,7 +74,7 @@ TEST_F(BenchmarkClientTest, BasicTestH1) {
   };
 
   for (int i = 0; i < amount; i++) {
-    client.tryStartOne(f);
+    client.startOne(f);
   }
 
   dispatcher_->run(Envoy::Event::Dispatcher::RunType::Block);
@@ -82,6 +85,40 @@ TEST_F(BenchmarkClientTest, BasicTestH1) {
   EXPECT_EQ(0, client.stream_reset_count());
   EXPECT_EQ(0, client.pool_overflow_failures());
   EXPECT_EQ(amount, client.http_good_response_count());
+}
+
+TEST_F(BenchmarkClientTest, BasicTestH1WithoutRequestQueue) {
+  Envoy::Http::HeaderMapImplPtr request_headers = std::make_unique<Envoy::Http::HeaderMapImpl>();
+  request_headers->insertMethod().value(Envoy::Http::Headers::get().MethodValues.Get);
+  BenchmarkHttpClient client(*dispatcher_, store_, time_system_, "http://127.0.0.1/",
+                             std::move(request_headers), false /*use h2*/);
+
+  client.set_connection_timeout(1s);
+  client.set_max_pending_requests(1);
+  client.initialize(runtime_);
+
+  uint64_t amount = 10;
+  int inflight_response_count = amount;
+
+  std::function<void()> f = [this, &client, &inflight_response_count, amount]() {
+    --inflight_response_count;
+    if ((client.http_good_response_count() + client.pool_overflow_failures()) == amount) {
+      dispatcher_->exit();
+    }
+  };
+
+  for (uint64_t i = 0; i < amount; i++) {
+    client.startOne(f);
+  }
+
+  dispatcher_->run(Envoy::Event::Dispatcher::RunType::Block);
+
+  EXPECT_EQ(9, inflight_response_count);
+  EXPECT_EQ(0, client.pool_connect_failures());
+  EXPECT_EQ(0, client.http_bad_response_count());
+  EXPECT_EQ(0, client.stream_reset_count());
+  EXPECT_EQ(amount - 1, client.pool_overflow_failures());
+  EXPECT_EQ(1, client.http_good_response_count());
 }
 
 // TODO(oschaaf): see figure out if we can and should simulated time in this test
@@ -95,7 +132,7 @@ TEST_F(BenchmarkClientTest, SequencedH2Test) {
   client.initialize(runtime_);
 
   // TODO(oschaaf): create an interface that pulls this from implementations upon implementation.
-  SequencerTarget f = std::bind(&BenchmarkHttpClient::tryStartOne, &client, std::placeholders::_1);
+  SequencerTarget f = std::bind(&BenchmarkHttpClient::startOne, &client, std::placeholders::_1);
 
   LinearRateLimiter rate_limiter(time_system_, 10ms);
   std::chrono::milliseconds duration(59ms);
@@ -108,7 +145,10 @@ TEST_F(BenchmarkClientTest, SequencedH2Test) {
   EXPECT_EQ(0, client.http_bad_response_count());
   EXPECT_EQ(0, client.stream_reset_count());
   EXPECT_EQ(0, client.pool_overflow_failures());
+
   // We expect all responses to get in within the 9 ms slack we gave it.
+  // TODO(oschaaf): under valgrind, on some systems, we overshoot here,
+  // ending up with 30+ good responses.
   EXPECT_EQ(5, client.http_good_response_count());
 }
 
