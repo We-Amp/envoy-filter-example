@@ -32,7 +32,10 @@ protected:
 private:
   Envoy::Event::Dispatcher& dispatcher_;
   Envoy::TimeSource& time_source_;
-  Envoy::Event::TimerPtr timer_;
+  Envoy::Event::TimerPtr timer1_;
+  Envoy::Event::TimerPtr timer2_;
+  Envoy::Event::TimerPtr timer3_;
+  Envoy::Event::TimerPtr timer4_;
   RateLimiter& rate_limiter_;
   SequencerTarget& target_;
   std::chrono::microseconds duration_;
