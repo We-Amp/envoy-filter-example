@@ -15,6 +15,10 @@ envoy_cc_test(
         "sequencer_test.cc",
     ],
     repository = "@envoy",
+    data = [
+        "certs.sh",
+        "lorem_ipsum.txt"
+    ],
     deps = [
         "@envoy//test/integration:integration_lib",
         "@envoy//test/server:utility_lib",

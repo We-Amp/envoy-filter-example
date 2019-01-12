@@ -45,8 +45,6 @@ public:
     Envoy::TestEnvironment::setEnvVar("TEST_TMPDIR", Envoy::TestEnvironment::temporaryDirectory(),
                                       1);
     Envoy::TestEnvironment::exec({Envoy::TestEnvironment::runfilesPath("test/certs.sh")});
-    Envoy::TestEnvironment::exec(
-        {Envoy::TestEnvironment::runfilesPath("envoy/test/common/ssl/gen_unittest_certs.sh")});
 
     const std::string body = R"EOF(
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam mauris felis, egestas eget turpis nec, ullamcorper laoreet magna. Donec ac condimentum lacus, nec semper eros. Sed iaculis arcu vitae egestas viverra. Nulla tempor, neque tempus tincidunt fermentum, orci nunc sagittis nisl, sed dapibus nunc ex sit amet justo. Ut porta pellentesque mi quis lobortis. Integer luctus, diam et mattis rhoncus, lacus orci condimentum tortor, vitae venenatis ante odio non massa. Duis ut nulla consectetur, elementum enim eu, maximus lacus. Ut id consequat libero. Mauris eget lorem et lorem iaculis laoreet a nec augue. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Maecenas ac cursus eros, ut eleifend lacus. Nam sit amet mauris nec mi luctus posuere. Phasellus ullamcorper vulputate purus sit amet dapibus. Mauris sit amet magna risus.
@@ -103,7 +101,7 @@ static_resources:
                   direct_response:
                     status: 200
                     body:
-                      filename: ./lorem_ipsum.txt
+                      filename: {{ test_tmpdir }}/lorem_ipsum.txt
             http_filters:
             - name: envoy.router
               config:
@@ -132,7 +130,7 @@ static_resources:
                   direct_response:
                     status: 200
                     body:
-                      filename: ./lorem_ipsum.txt
+                      filename: {{ test_tmpdir }}/lorem_ipsum.txt
             http_filters:
             - name: envoy.router
               config:
@@ -185,7 +183,8 @@ static_resources:
 };
 
 INSTANTIATE_TEST_CASE_P(IpVersions, BenchmarkClientTest,
-                        testing::ValuesIn(Envoy::TestEnvironment::getIpVersionsForTest()),
+                        // testing::ValuesIn(Envoy::TestEnvironment::getIpVersionsForTest()),
+                        testing::ValuesIn({Envoy::Network::Address::IpVersion::v4}),
                         Envoy::TestUtility::ipTestParamsToString);
 
 // TODO(oschaaf): this is a very,very crude end-to-end test.
