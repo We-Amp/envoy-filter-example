@@ -44,8 +44,6 @@ public:
     // TODO(oschaaf): ask around how we should do this.
     Envoy::TestEnvironment::setEnvVar("TEST_TMPDIR", Envoy::TestEnvironment::temporaryDirectory(),
                                       1);
-    // Envoy::TestEnvironment::exec(
-    ///    {Envoy::TestEnvironment::runfilesPath("envoy/test/config/integration/certs/certs.sh")});
     Envoy::TestEnvironment::exec({Envoy::TestEnvironment::runfilesPath("test/certs.sh")});
     Envoy::TestEnvironment::exec(
         {Envoy::TestEnvironment::runfilesPath("envoy/test/common/ssl/gen_unittest_certs.sh")});
@@ -81,74 +79,74 @@ static_resources:
         port_value: 0
   listeners:
   # define an origin server on :10000 that always returns "lorem ipsum..."
-    name: listener_0
-    address:
-      socket_address:
-        address: 127.0.0.1
-        port_value: 0
-    filter_chains:
-    - filters:
-      - name: envoy.http_connection_manager
-        config: 
-          generate_request_id: false
-          codec_type: auto
-          stat_prefix: ingress_http
-          route_config:
-            name: local_route
-            virtual_hosts:
-            - name: service
-              domains:
-              - "*"
-              routes:
-              - match:
-                  prefix: /
-                direct_response:
-                  status: 200
-                  body:
-                    filename: ./lorem_ipsum.txt
-          http_filters:
-          - name: envoy.router
-            config:
-              dynamic_stats: false
-    name: listener_1
-    address:
-      socket_address:
-        address: 127.0.0.1
-        port_value: 0
-    filter_chains:
-    - filters:
-      - name: envoy.http_connection_manager
-        config: 
-          generate_request_id: false
-          codec_type: auto
-          stat_prefix: ingress_http
-          route_config:
-            name: local_route
-            virtual_hosts:
-            - name: service
-              domains:
-              - "*"
-              routes:
-              - match:
-                  prefix: /
-                direct_response:
-                  status: 200
-                  body:
-                    filename: ./lorem_ipsum.txt
-          http_filters:
-          - name: envoy.router
-            config:
-              dynamic_stats: false
-      tls_context:
-        common_tls_context:
-          tls_certificates:
-            certificate_chain:
-              filename: "{{ test_tmpdir }}/unittestcert.pem"
-            private_key:
-              filename: "{{ test_tmpdir }}/unittestkey.pem"
-          validation_context:
-            trusted_ca:
-              filename: "{{ test_tmpdir }}/ca_cert.pem"
+    - name: listener_0
+      address:
+        socket_address:
+          address: 127.0.0.1
+          port_value: 0
+      filter_chains:
+      - filters:
+        - name: envoy.http_connection_manager
+          config: 
+            generate_request_id: false
+            codec_type: auto
+            stat_prefix: ingress_http
+            route_config:
+              name: local_route
+              virtual_hosts:
+              - name: service
+                domains:
+                - "*"
+                routes:
+                - match:
+                    prefix: /
+                  direct_response:
+                    status: 200
+                    body:
+                      filename: ./lorem_ipsum.txt
+            http_filters:
+            - name: envoy.router
+              config:
+                dynamic_stats: false
+    - name: listener_1
+      address:
+        socket_address:
+          address: 127.0.0.1
+          port_value: 0
+      filter_chains:
+      - filters:
+        - name: envoy.http_connection_manager
+          config: 
+            generate_request_id: false
+            codec_type: auto
+            stat_prefix: ingress_http
+            route_config:
+              name: local_route
+              virtual_hosts:
+              - name: service
+                domains:
+                - "*"
+                routes:
+                - match:
+                    prefix: /
+                  direct_response:
+                    status: 200
+                    body:
+                      filename: ./lorem_ipsum.txt
+            http_filters:
+            - name: envoy.router
+              config:
+                dynamic_stats: false
+        tls_context:
+          common_tls_context:
+            tls_certificates:
+              certificate_chain:
+                filename: "{{ test_tmpdir }}/unittestcert.pem"
+              private_key:
+                filename: "{{ test_tmpdir }}/unittestkey.pem"
+            validation_context:
+              trusted_ca:
+                filename: "{{ test_tmpdir }}/ca_cert.pem"
 )EOF";
     lorem_ipsum_config = Envoy::TestEnvironment::substitute(lorem_ipsum_config);
   }
@@ -160,14 +158,12 @@ static_resources:
   }
 
   std::string getTestServerHostAndPort() {
-    uint32_t port = test_server_->server()
-                        .listenerManager()
-                        .listeners()[0]
-                        .get()
-                        .socket()
-                        .localAddress()
-                        ->ip()
-                        ->port();
+    uint32_t port = lookupPort("listener_0");
+    return fmt::format("127.0.0.1:{}", port);
+  }
+
+  std::string getTestServerHostAndSslPort() {
+    uint32_t port = lookupPort("listener_1");
     return fmt::format("127.0.0.1:{}", port);
   }
 
@@ -284,7 +280,7 @@ TEST_P(BenchmarkClientTest, SequencedH2Test) {
   request_headers->insertMethod().value(Envoy::Http::Headers::get().MethodValues.Get);
 
   BenchmarkHttpClient client(*dispatcher_, store_, time_system_,
-                             fmt::format("https://{}/", getTestServerHostAndPort()),
+                             fmt::format("https://{}/", getTestServerHostAndSslPort()),
                              std::move(request_headers), true /*use h2*/);
   client.initialize(runtime_);
 
