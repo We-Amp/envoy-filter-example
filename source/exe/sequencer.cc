@@ -15,31 +15,22 @@ Sequencer::Sequencer(Envoy::Event::Dispatcher& dispatcher, Envoy::TimeSource& ti
   if (target_ == nullptr) {
     throw NighthawkException("Sequencer must be constructed with a SequencerTarget.");
   }
-  auto f = [this]() { run(true); };
-  timer1_ = dispatcher_.createTimer(f);
-  timer2_ = dispatcher_.createTimer(f);
-  timer3_ = dispatcher_.createTimer(f);
-  timer4_ = dispatcher_.createTimer(f);
+  periodic_timer_ = dispatcher_.createTimer([this]() { run(true); });
+  incidental_timer_ = dispatcher_.createTimer([this]() { run(false); });
 }
 
 void Sequencer::start() {
   start_ = time_source_.monotonicTime();
-  run(false);
-  scheduleRun();
-} // namespace Nighthawk
-
-void Sequencer::scheduleRun() {
-  timer1_->enableTimer(200us);
-  timer2_->enableTimer(400us);
-  timer3_->enableTimer(600us);
-  timer4_->enableTimer(800us);
+  run(true);
 }
+
+void Sequencer::scheduleRun() { periodic_timer_->enableTimer(1ms); }
 
 void Sequencer::run(bool from_timer) {
   auto now = time_source_.monotonicTime();
   // We put a cap on duration here. Which means we do not care care if we initiate/complete more
   // or less requests then anticipated based on rps * duration (seconds).
-  if ((now - start_) > (duration_ + 1s)) {
+  if ((now - start_) > (duration_)) {
     auto rate = targets_completed_ /
                 (std::chrono::duration_cast<std::chrono::seconds>(now - start_).count() * 1.00);
 
@@ -73,7 +64,7 @@ void Sequencer::run(bool from_timer) {
         latency_callback_(dur);
       }
       targets_completed_++;
-      run(false);
+      incidental_timer_->enableTimer(0ms);
     });
     if (ok) {
       targets_initiated_++;
@@ -81,6 +72,15 @@ void Sequencer::run(bool from_timer) {
       rate_limiter_.releaseOne();
       break;
     }
+  }
+
+  // We saturated the rate limiter, and there's no outstanding work.
+  // That means it looks like we are idle. Spin this event to improve
+  // accuracy in low rps settings. Not that this isn't ideal, because:
+  // - Connection-level events are not checked here, and we may delay those.
+  // - This won't help us with in all scenarios.
+  if (targets_initiated_ == targets_completed_) {
+    incidental_timer_->enableTimer(0ms);
   }
 
   if (from_timer) {
