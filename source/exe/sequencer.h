@@ -24,6 +24,11 @@ public:
   void set_latency_callback(std::function<void(std::chrono::nanoseconds)> latency_callback) {
     latency_callback_ = latency_callback;
   }
+  int64_t completions_per_second() {
+    return targets_completed_ /
+           std::chrono::duration_cast<std::chrono::seconds>(time_source_.monotonicTime() - start_)
+               .count();
+  }
 
 protected:
   void run(bool from_timer);
@@ -32,7 +37,8 @@ protected:
 private:
   Envoy::Event::Dispatcher& dispatcher_;
   Envoy::TimeSource& time_source_;
-  Envoy::Event::TimerPtr timer_;
+  Envoy::Event::TimerPtr periodic_timer_;
+  Envoy::Event::TimerPtr incidental_timer_;
   RateLimiter& rate_limiter_;
   SequencerTarget& target_;
   std::chrono::microseconds duration_;

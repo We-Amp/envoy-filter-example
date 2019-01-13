@@ -2,7 +2,8 @@
 
 #include "gtest/gtest.h"
 
-#include "test/test_common/simulated_time_system.h"
+//#include "test/test_common/simulated_time_system.h"
+#include "common/event/real_time_system.h"
 
 #include "common/api/api_impl.h"
 #include "common/common/thread_impl.h"
@@ -30,12 +31,18 @@ public:
     return true;
   }
 
-  void SetUp() { time_system_.setMonotonicTime(0ms); }
+  void SetUp() { /*time_system_.setMonotonicTime(0s);*/
+  }
   void TearDown() {}
 
   Envoy::Thread::ThreadFactoryImplPosix thread_factory_;
   Envoy::Stats::IsolatedStoreImpl store_;
-  Envoy::Event::SimulatedTimeSystem time_system_;
+
+  // Simulated time broke when we introduced the spin loop.
+  // Figure that out at some point and restore simulated
+  // time usage here.
+  // Envoy::Event::SimulatedTimeSystem time_system_;
+  Envoy::Event::RealTimeSystem time_system_;
   Envoy::Api::Impl api_;
   Envoy::Event::DispatcherPtr dispatcher_;
   int callback_test_count_;
@@ -47,7 +54,7 @@ TEST_F(SequencerTest, BasicTest) {
 
   Sequencer sequencer(*dispatcher_, time_system_, rate_limiter, f, 1s, 1s);
   sequencer.start();
-  time_system_.setMonotonicTime(std::chrono::milliseconds(1000ms));
+  // time_system_.setMonotonicTime(1s);
   sequencer.waitForCompletion();
   // We ought to have observed 10 callbacks at the 10/second pacing.
   EXPECT_EQ(10, callback_test_count_);

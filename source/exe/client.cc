@@ -18,6 +18,7 @@
 #include "exe/benchmark_client.h"
 #include "exe/rate_limiter.h"
 #include "exe/sequencer.h"
+#include "exe/streaming_stats.h"
 
 using namespace std::chrono_literals;
 
@@ -117,14 +118,14 @@ bool ClientMain::run() {
     std::vector<uint64_t>& results = global_results.at(i);
     // TODO(oschaaf): get us a stats sink.
 
-    // This results on lots of valgrind complaints, unfortunately.
     results.reserve(options_.duration().count() * options_.requests_per_second());
 
-    auto thread = thread_factory.createThread([&]() {
+    auto thread = thread_factory.createThread([&, i]() {
       auto store = std::make_unique<Envoy::Stats::IsolatedStoreImpl>();
       auto api =
           std::make_unique<Envoy::Api::Impl>(1000ms /*flush interval*/, thread_factory, *store);
       auto dispatcher = api->allocateDispatcher(*time_system_);
+      StreamingStats streaming_stats;
 
       // TODO(oschaaf): not here.
       Envoy::ThreadLocal::InstanceImpl tls;
@@ -145,6 +146,10 @@ bool ClientMain::run() {
 
       client->initialize(runtime);
 
+      // one to warm up.
+      client->tryStartOne([&dispatcher] { dispatcher->exit(); });
+      dispatcher->run(Envoy::Event::Dispatcher::RunType::Block);
+
       // With the linear rate limiter, we run an open-loop test, where we initiate new
       // calls regardless of the number of comletions we observe keeping up.
       LinearRateLimiter rate_limiter(time_system, 1000000000ns / options_.requests_per_second());
@@ -153,16 +158,37 @@ bool ClientMain::run() {
       Sequencer sequencer(*dispatcher, time_system, rate_limiter, f, options_.duration(),
                           options_.timeout());
 
-      sequencer.set_latency_callback([&results](std::chrono::nanoseconds latency) {
+      sequencer.set_latency_callback([&results, i, this, &streaming_stats, &client,
+                                      &sequencer](std::chrono::nanoseconds latency) {
         ASSERT(latency.count() > 0);
         results.push_back(latency.count());
+        streaming_stats.addValue(latency.count());
+
+        // Report results from the first worker about every one second.
+        // TODO(oschaaf): we should only do this in explicit verbose mode because
+        // of introducing locks, probably.
+        // TODO(oschaaf): failures aren't ending up in this callback, so they will
+        // influence timing of this happening.
+        if (((results.size() % options_.requests_per_second()) == 0) && i == 0) {
+          ENVOY_LOG(info,
+                    "#{} completions/sec. mean: {}+/-{}us. "
+                    "pool connect failures: {}, overflow failures: {}. Replies: Good {}, Bad: "
+                    "{}. Stream resets: {}.",
+                    sequencer.completions_per_second(),
+                    (static_cast<int64_t>(streaming_stats.mean())) / 1000,
+                    (static_cast<int64_t>(streaming_stats.stdev())) / 1000,
+
+                    client->pool_connect_failures(), client->pool_overflow_failures(),
+                    client->http_good_response_count(), client->http_bad_response_count(),
+                    client->stream_reset_count());
+        }
       });
 
       sequencer.start();
       sequencer.waitForCompletion();
       ENVOY_LOG(info,
-                "Connection: connect failures: {}, overflow failures: {} . Protocol: good {} / bad "
-                "{} / reset {}",
+                "pool connect failures: {}, overflow failures: {}. Replies: Good {}, Bad: "
+                "{}. Stream resets: {}",
                 client->pool_connect_failures(), client->pool_overflow_failures(),
                 client->http_good_response_count(), client->http_bad_response_count(),
                 client->stream_reset_count());
@@ -185,11 +211,6 @@ bool ClientMain::run() {
 
   for (uint32_t i = 0; i < concurrency; i++) {
     std::vector<uint64_t>& results = global_results.at(i);
-    // Remove first element, consider it a warmup call.
-    // TODO(oschaaf):
-    if (!results.empty()) {
-      results.erase(results.begin());
-    }
     for (int r : results) {
       myfile << (r / 1000) << "\n";
     }
