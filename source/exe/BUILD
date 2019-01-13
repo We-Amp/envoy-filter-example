@@ -48,6 +48,7 @@ envoy_cc_library(
         "benchmark_client.cc",
         "rate_limiter.cc",
         "sequencer.cc",
+        "streaming_stats.cc",
     ],
     hdrs = [
         "client.h",
@@ -57,6 +58,7 @@ envoy_cc_library(
         "benchmark_client.h",
         "rate_limiter.h",
         "sequencer.h",
+        "streaming_stats.h",
     ],
     visibility = ["//visibility:public"],
     repository = "@envoy",

@@ -11,26 +11,6 @@
 
 namespace Nighthawk {
 
-class StreamingStats {
-public:
-  StreamingStats();
-  void clear();
-  void push(int64_t x);
-  int64_t num_values() const;
-  double mean() const;
-  double variance() const;
-  double stdev() const;
-  double skewness() const;
-  double kurtosis() const;
-
-  friend StreamingStats operator+(const StreamingStats a, const StreamingStats b);
-  StreamingStats& operator+=(const StreamingStats& rhs);
-
-private:
-  int64_t n;
-  double M1, M2, M3, M4;
-};
-
 class ClientMain : public Envoy::Logger::Loggable<Envoy::Logger::Id::main> {
 public:
   ClientMain(int argc, const char* const* argv);
