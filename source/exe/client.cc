@@ -203,6 +203,9 @@ bool ClientMain::run() {
       // TODO(oschaaf): shouldn't be doing this here.
       tls.shutdownGlobalThreading();
     });
+
+    // TODO(oschaaf): find a more reasonable way to jitter requests.introe
+    usleep(5000);
     threads.push_back(std::move(thread));
   }
 
