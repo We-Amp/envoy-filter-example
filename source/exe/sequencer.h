@@ -25,9 +25,11 @@ public:
     latency_callback_ = latency_callback;
   }
   int64_t completions_per_second() {
-    return targets_completed_ /
-           std::chrono::duration_cast<std::chrono::seconds>(time_source_.monotonicTime() - start_)
-               .count();
+    int64_t seconds =
+        std::chrono::duration_cast<std::chrono::seconds>(time_source_.monotonicTime() - start_)
+            .count();
+
+    return seconds == 0 ? 0 : targets_completed_ / seconds;
   }
 
 protected:

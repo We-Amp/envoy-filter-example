@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <random>
 
 #include "ares.h"
 
@@ -162,6 +163,12 @@ bool ClientMain::run() {
       Sequencer sequencer(*dispatcher, time_system, rate_limiter, f, options_.duration(),
                           options_.timeout());
 
+      // We try to offset the start of each thread so that they will be spaced evenly in time
+      // accross a single request. This at least helps a bit for short concurrent high-rps runs.
+      double rate = 1 / double(options_.requests_per_second());
+      int64_t spread_us = (rate / concurrency) * i * 1000000;
+      usleep(spread_us);
+
       sequencer.set_latency_callback([&results, i, this, &streaming_stats, &client, &sequencer,
                                       &store](std::chrono::nanoseconds latency) {
         ASSERT(latency.count() > 0);
@@ -175,15 +182,14 @@ bool ClientMain::run() {
         // influence timing of this happening.
         if (((results.size() % options_.requests_per_second()) == 0) && i == 0) {
           auto foo = store->counters().front();
-          int connecion_count = store->counter("nighthawk.upstream_cx_total").value();
+          int connection_count = store->counter("nighthawk.upstream_cx_total").value();
           ENVOY_LOG(info,
                     "#{} completions/sec. #connections: {}. mean: {}+/-{}us. "
                     "pool connect failures: {}. Replies: Good {}, Bad: "
                     "{}. Stream resets: {}.",
-                    sequencer.completions_per_second(), connecion_count,
+                    sequencer.completions_per_second(), connection_count,
                     (static_cast<int64_t>(streaming_stats.mean())) / 1000,
                     (static_cast<int64_t>(streaming_stats.stdev())) / 1000,
-
                     client->pool_connect_failures(), client->http_good_response_count(),
                     client->http_bad_response_count(), client->stream_reset_count());
         }
@@ -191,12 +197,16 @@ bool ClientMain::run() {
 
       sequencer.start();
       sequencer.waitForCompletion();
+      int connection_count = store->counter("nighthawk.upstream_cx_total").value();
       ENVOY_LOG(info,
-                "pool connect failures: {}, overflow failures: {}. Replies: Good {}, Bad: "
-                "{}. Stream resets: {}",
-                client->pool_connect_failures(), client->pool_overflow_failures(),
-                client->http_good_response_count(), client->http_bad_response_count(),
-                client->stream_reset_count());
+                "#{} completions/sec. #connections: {}. mean: {}+/-{}us. "
+                "pool connect failures: {}. Replies: Good {}, Bad: "
+                "{}. Stream resets: {}.",
+                sequencer.completions_per_second(), connection_count,
+                (static_cast<int64_t>(streaming_stats.mean())) / 1000,
+                (static_cast<int64_t>(streaming_stats.stdev())) / 1000,
+                client->pool_connect_failures(), client->http_good_response_count(),
+                client->http_bad_response_count(), client->stream_reset_count());
       // As we prevent pool overflow failures, we don't expect any.
       ASSERT(!client->pool_overflow_failures());
       client.reset();
@@ -204,8 +214,6 @@ bool ClientMain::run() {
       tls.shutdownGlobalThreading();
     });
 
-    // TODO(oschaaf): find a more reasonable way to jitter requests.introe
-    usleep(5000);
     threads.push_back(std::move(thread));
   }
 
