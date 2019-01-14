@@ -141,24 +141,10 @@ bool BenchmarkHttpClient::tryStartOne(std::function<void()> caller_completion_ca
            .canCreate()) {
     return false;
   }
-  /*
-    if (!cluster_->resourceManager(Envoy::Upstream::ResourcePriority::Default)
-             .connections()
-             .canCreate()) {
-      return false;
-    }*/
 
   auto stream_decoder = new Nighthawk::Http::StreamDecoder(caller_completion_callback, *this);
-
-  //  bool cx_overflow = cluster_->stats().upstream_cx_overflow_.value();
-  //  bool pending_overflow = cluster_->stats().upstream_rq_pending_overflow_.value();
-
   pool_->newStream(*stream_decoder, *this);
 
-  //  if (cancellable == nullptr) {
-  // return cx_overflow == cluster_->stats().upstream_cx_overflow_.value() &&
-  // pending_overflow == cluster_->stats().upstream_rq_pending_overflow_.value();
-  //}
   return true;
 }
 
@@ -168,7 +154,7 @@ void BenchmarkHttpClient::onComplete(bool success, const Envoy::Http::HeaderMap&
   } else {
     ASSERT(headers.Status());
     int64_t status = Envoy::Http::Utility::getResponseStatus(headers);
-    // TODO(oschaaf):
+    // TODO(oschaaf): we can very probably pull these from the stats.
     if (status >= 400 && status <= 599) {
       http_bad_response_count_++;
     } else {
