@@ -32,7 +32,9 @@ public:
 
 protected:
   void run(bool from_timer);
+  void spin();
   void scheduleRun();
+  void stop();
 
 private:
   Envoy::Event::Dispatcher& dispatcher_;

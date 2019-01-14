@@ -1,5 +1,7 @@
 #include "nighthawk/common/exception.h"
 
+#include "common/common/assert.h"
+
 #include "exe/sequencer.h"
 
 using namespace std::chrono_literals;
@@ -26,6 +28,12 @@ void Sequencer::start() {
 
 void Sequencer::scheduleRun() { periodic_timer_->enableTimer(1ms); }
 
+void Sequencer::stop() {
+  dispatcher_.exit();
+  periodic_timer_->disableTimer();
+  incidental_timer_->disableTimer();
+}
+
 void Sequencer::run(bool from_timer) {
   auto now = time_source_.monotonicTime();
   // We put a cap on duration here. Which means we do not care care if we initiate/complete more
@@ -39,7 +47,7 @@ void Sequencer::run(bool from_timer) {
                 "Sequencer done processing {} operations in {} ms. (completion rate {}/second.)",
                 targets_completed_,
                 std::chrono::duration_cast<std::chrono::milliseconds>(now - start_).count(), rate);
-      dispatcher_.exit();
+      stop();
       return;
     } else {
       // We wait untill all due responses are in or the grace period times out.
@@ -48,7 +56,7 @@ void Sequencer::run(bool from_timer) {
                   "Sequencer timeout waiting for due responses. Initiated: {} / Completed: {}. "
                   "(completion ~ rate {}/second.)",
                   targets_initiated_, targets_completed_, rate);
-        dispatcher_.exit();
+        stop();
         return;
       }
       if (from_timer) {
@@ -81,12 +89,21 @@ void Sequencer::run(bool from_timer) {
   // - Connection-level events are not checked here, and we may delay those.
   // - This won't help us with in all scenarios.
   if (targets_initiated_ == targets_completed_) {
+    spin();
     incidental_timer_->enableTimer(0ms);
   }
 
   if (from_timer) {
     scheduleRun();
   }
+}
+
+void Sequencer::spin() {
+  ASSERT(targets_initiated_ == targets_completed_);
+  while (!rate_limiter_.tryAcquireOne()) {
+    ;
+  }
+  rate_limiter_.releaseOne();
 }
 
 void Sequencer::waitForCompletion() { dispatcher_.run(Envoy::Event::Dispatcher::RunType::Block); }
