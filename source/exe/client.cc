@@ -104,7 +104,8 @@ bool ClientMain::run() {
     ENVOY_LOG(info, "Detected {} (v)CPUs with affinity..", cpu_cores_with_affinity);
   }
 
-  ENVOY_LOG(info, "Starting {} threads / event loops.", concurrency);
+  ENVOY_LOG(info, "Starting {} threads / event loops. Test duration: {} seconds.", concurrency,
+            options_.duration().count());
   ENVOY_LOG(info, "Global targets: {} connections and {} calls per second.",
             options_.connections() * concurrency, options_.requests_per_second() * concurrency);
 
@@ -158,8 +159,8 @@ bool ClientMain::run() {
       Sequencer sequencer(*dispatcher, time_system, rate_limiter, f, options_.duration(),
                           options_.timeout());
 
-      sequencer.set_latency_callback([&results, i, this, &streaming_stats, &client,
-                                      &sequencer](std::chrono::nanoseconds latency) {
+      sequencer.set_latency_callback([&results, i, this, &streaming_stats, &client, &sequencer,
+                                      &store](std::chrono::nanoseconds latency) {
         ASSERT(latency.count() > 0);
         results.push_back(latency.count());
         streaming_stats.addValue(latency.count());
@@ -170,17 +171,18 @@ bool ClientMain::run() {
         // TODO(oschaaf): failures aren't ending up in this callback, so they will
         // influence timing of this happening.
         if (((results.size() % options_.requests_per_second()) == 0) && i == 0) {
+          auto foo = store->counters().front();
+          int connecion_count = store->counter("nighthawk.upstream_cx_total").value();
           ENVOY_LOG(info,
-                    "#{} completions/sec. mean: {}+/-{}us. "
-                    "pool connect failures: {}, overflow failures: {}. Replies: Good {}, Bad: "
+                    "#{} completions/sec. #connections: {}. mean: {}+/-{}us. "
+                    "pool connect failures: {}. Replies: Good {}, Bad: "
                     "{}. Stream resets: {}.",
-                    sequencer.completions_per_second(),
+                    sequencer.completions_per_second(), connecion_count,
                     (static_cast<int64_t>(streaming_stats.mean())) / 1000,
                     (static_cast<int64_t>(streaming_stats.stdev())) / 1000,
 
-                    client->pool_connect_failures(), client->pool_overflow_failures(),
-                    client->http_good_response_count(), client->http_bad_response_count(),
-                    client->stream_reset_count());
+                    client->pool_connect_failures(), client->http_good_response_count(),
+                    client->http_bad_response_count(), client->stream_reset_count());
         }
       });
 

@@ -103,8 +103,8 @@ void BenchmarkHttpClient::initialize(Envoy::Runtime::LoaderImpl& runtime) {
   thresholds->mutable_max_pending_requests()->set_value(max_pending_requests_);
 
   Envoy::Stats::ScopePtr scope = store_.createScope(fmt::format(
-      "cluster.{}.", cluster_config.alt_stat_name().empty() ? cluster_config.name()
-                                                            : cluster_config.alt_stat_name()));
+      "nighthawk.{}", cluster_config.alt_stat_name().empty() ? cluster_config.name()
+                                                             : cluster_config.alt_stat_name()));
 
   Envoy::Network::TransportSocketFactoryPtr socket_factory;
   if (is_https_) {
