@@ -77,7 +77,7 @@ bool ClientMain::run() {
 
   Envoy::Thread::MutexBasicLockable log_lock;
   auto logging_context = std::make_unique<Envoy::Logger::Context>(
-      spdlog::level::info, Envoy::Logger::Logger::DEFAULT_LOG_FORMAT, log_lock);
+      spdlog::level::info, "[%T.%e][%t][%l][%n]> %v", log_lock);
 
   uint32_t cpu_cores_with_affinity = determine_cpu_cores_with_affinity();
   if (cpu_cores_with_affinity == 0) {
@@ -183,11 +183,10 @@ bool ClientMain::run() {
         if (((results.size() % options_.requests_per_second()) == 0) && i == 0) {
           auto foo = store->counters().front();
           int connection_count = store->counter("nighthawk.upstream_cx_total").value();
-          ENVOY_LOG(info,
-                    "#{} completions/sec. #connections: {}. mean: {}+/-{}us. "
-                    "pool connect failures: {}. Replies: Good {}, Bad: "
-                    "{}. Stream resets: {}.",
-                    sequencer.completions_per_second(), connection_count,
+          ENVOY_LOG(trace,
+                    "  t{}: {} completions/sec. #connections: {}. mean: {}us. stdev: {}. "
+                    "connect failures: {}. Replies: Good:{}, Bad:{}. Stream resets: {}. ",
+                    i, sequencer.completions_per_second(), connection_count,
                     (static_cast<int64_t>(streaming_stats.mean())) / 1000,
                     (static_cast<int64_t>(streaming_stats.stdev())) / 1000,
                     client->pool_connect_failures(), client->http_good_response_count(),
@@ -197,12 +196,12 @@ bool ClientMain::run() {
 
       sequencer.start();
       sequencer.waitForCompletion();
+
       int connection_count = store->counter("nighthawk.upstream_cx_total").value();
       ENVOY_LOG(info,
-                "#{} completions/sec. #connections: {}. mean: {}+/-{}us. "
-                "pool connect failures: {}. Replies: Good {}, Bad: "
-                "{}. Stream resets: {}.",
-                sequencer.completions_per_second(), connection_count,
+                "  t{}: {} completions/sec. #connections: {}. mean: {}us. stdev: {}. "
+                "connect failures: {}. Replies: Good:{}, Bad:{}. Stream resets: {}. ",
+                i, sequencer.completions_per_second(), connection_count,
                 (static_cast<int64_t>(streaming_stats.mean())) / 1000,
                 (static_cast<int64_t>(streaming_stats.stdev())) / 1000,
                 client->pool_connect_failures(), client->http_good_response_count(),

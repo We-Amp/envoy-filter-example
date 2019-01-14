@@ -24,6 +24,8 @@ public:
   void set_latency_callback(std::function<void(std::chrono::nanoseconds)> latency_callback) {
     latency_callback_ = latency_callback;
   }
+
+  // TODO(oschaaf): calling this after stop() will return broken/unexpected results.
   double completions_per_second() {
     double us =
         std::chrono::duration_cast<std::chrono::microseconds>(time_source_.monotonicTime() - start_)
@@ -34,6 +36,7 @@ public:
 
 protected:
   void run(bool from_timer);
+  // TODO(oschaaf): these need test coverage.
   void spin();
   void scheduleRun();
   void stop();
