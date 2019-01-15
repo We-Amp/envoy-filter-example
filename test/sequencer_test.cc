@@ -52,7 +52,7 @@ TEST_F(SequencerTest, BasicTest) {
   LinearRateLimiter rate_limiter(time_system_, 100ms);
   SequencerTarget f = std::bind(&SequencerTest::callback_test, this, std::placeholders::_1);
 
-  Sequencer sequencer(*dispatcher_, time_system_, rate_limiter, f, 1s, 1s);
+  Sequencer sequencer(*dispatcher_, time_system_, rate_limiter, f, 1001ms, 1s);
   sequencer.start();
   // time_system_.setMonotonicTime(1s);
   sequencer.waitForCompletion();
