@@ -36,8 +36,6 @@ public:
 
 protected:
   void run(bool from_timer);
-  // TODO(oschaaf): these need test coverage.
-  void spin();
   void scheduleRun();
   void stop();
 

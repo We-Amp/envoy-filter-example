@@ -26,7 +26,7 @@ void Sequencer::start() {
   run(true);
 }
 
-void Sequencer::scheduleRun() { periodic_timer_->enableTimer(1ms); }
+void Sequencer::scheduleRun() { periodic_timer_->enableTimer(1us); }
 
 void Sequencer::stop() {
   dispatcher_.exit();
@@ -72,7 +72,7 @@ void Sequencer::run(bool from_timer) {
         latency_callback_(dur);
       }
       targets_completed_++;
-      incidental_timer_->enableTimer(0ms);
+      incidental_timer_->enableTimer(0us);
     });
     if (ok) {
       targets_initiated_++;
@@ -88,21 +88,12 @@ void Sequencer::run(bool from_timer) {
   // - Connection-level events are not checked here, and we may delay those.
   // - This won't help us with in all scenarios.
   if (targets_initiated_ == targets_completed_) {
-    spin();
-    incidental_timer_->enableTimer(0ms);
+    incidental_timer_->enableTimer(1us);
   }
 
   if (from_timer) {
     scheduleRun();
   }
-}
-
-void Sequencer::spin() {
-  ASSERT(targets_initiated_ == targets_completed_);
-  while (!rate_limiter_.tryAcquireOne()) {
-    ;
-  }
-  rate_limiter_.releaseOne();
 }
 
 void Sequencer::waitForCompletion() { dispatcher_.run(Envoy::Event::Dispatcher::RunType::Block); }
