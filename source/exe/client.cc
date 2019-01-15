@@ -163,12 +163,6 @@ bool ClientMain::run() {
       Sequencer sequencer(*dispatcher, time_system, rate_limiter, f, options_.duration(),
                           options_.timeout());
 
-      // We try to offset the start of each thread so that they will be spaced evenly in time
-      // accross a single request. This at least helps a bit for short concurrent high-rps runs.
-      double rate = 1 / double(options_.requests_per_second());
-      int64_t spread_us = (rate / concurrency) * i * 1000000;
-      usleep(spread_us);
-
       sequencer.set_latency_callback([&results, i, this, &streaming_stats, &client, &sequencer,
                                       &store](std::chrono::nanoseconds latency) {
         ASSERT(latency.count() > 0);
@@ -193,6 +187,13 @@ bool ClientMain::run() {
                     client->http_bad_response_count(), client->stream_reset_count());
         }
       });
+
+      // We try to offset the start of each thread so that they will be spaced evenly in time
+      // accross a single request. This at least helps a bit for short concurrent high-rps runs.
+      double rate = 1 / double(options_.requests_per_second());
+      int64_t spread_us = (rate / concurrency) * i * 1000000;
+      ENVOY_LOG(trace, "Delay start of worker for {} us.", spread_us);
+      usleep(spread_us);
 
       sequencer.start();
       sequencer.waitForCompletion();

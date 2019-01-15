@@ -34,7 +34,7 @@ void Sequencer::stop() {
   incidental_timer_->disableTimer();
 }
 
-void Sequencer::run(bool from_timer) {
+void Sequencer::run(bool from_periodic_timer) {
   auto now = time_source_.monotonicTime();
   // We put a cap on duration here. Which means we do not care care if we initiate/complete more
   // or less requests then anticipated based on rps * duration (seconds).
@@ -58,7 +58,7 @@ void Sequencer::run(bool from_timer) {
                   targets_initiated_, targets_completed_, rate);
         return;
       }
-      if (from_timer) {
+      if (from_periodic_timer) {
         scheduleRun();
       }
     }
@@ -82,16 +82,16 @@ void Sequencer::run(bool from_timer) {
     }
   }
 
-  // We saturated the rate limiter, and there's no outstanding work.
-  // That means it looks like we are idle. Spin this event to improve
-  // accuracy in low rps settings. Not that this isn't ideal, because:
-  // - Connection-level events are not checked here, and we may delay those.
-  // - This won't help us with in all scenarios.
-  if (targets_initiated_ == targets_completed_) {
-    incidental_timer_->enableTimer(1us);
-  }
-
-  if (from_timer) {
+  if (!from_periodic_timer) {
+    if (targets_initiated_ == targets_completed_) {
+      // We saturated the rate limiter, and there's no outstanding work.
+      // That means it looks like we are idle. Spin this event to improve
+      // accuracy in low rps settings. Not that this isn't ideal, because:
+      // - Connection-level events are not checked here, and we may delay those.
+      // - This won't help us with in all scenarios, e.g. long running responses.
+      incidental_timer_->enableTimer(0us);
+    }
+  } else {
     scheduleRun();
   }
 }
