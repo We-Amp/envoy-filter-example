@@ -82,27 +82,19 @@ void Sequencer::run(bool from_timer) {
     }
   }
 
-  // We saturated the rate limiter, and there's no outstanding work.
-  // That means it looks like we are idle. Spin this event to improve
-  // accuracy in low rps settings. Not that this isn't ideal, because:
-  // - Connection-level events are not checked here, and we may delay those.
-  // - This won't help us with in all scenarios.
-  if (targets_initiated_ == targets_completed_) {
-    spin();
-    incidental_timer_->enableTimer(0ms);
-  }
-
-  if (from_timer) {
+  if (!from_timer) {
+    if (targets_initiated_ == targets_completed_) {
+      // We saturated the rate limiter, and there's no outstanding work.
+      // That means it looks like we are idle. Spin this event to improve
+      // accuracy in low rps settings. Not that this isn't ideal, because:
+      // - Connection-level events are not checked here, and we may delay those.
+      // - This won't help us with in all scenarios.
+      usleep(0);
+      incidental_timer_->enableTimer(0ms);
+    }
+  } else {
     scheduleRun();
   }
-}
-
-void Sequencer::spin() {
-  ASSERT(targets_initiated_ == targets_completed_);
-  while (!rate_limiter_.tryAcquireOne()) {
-    ;
-  }
-  rate_limiter_.releaseOne();
 }
 
 void Sequencer::waitForCompletion() { dispatcher_.run(Envoy::Event::Dispatcher::RunType::Block); }

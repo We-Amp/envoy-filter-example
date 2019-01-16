@@ -22,6 +22,7 @@ public:
   virtual std::string uri() const PURE;
   virtual bool h2() const PURE;
   virtual std::string concurrency() const PURE;
+  virtual std::string verbosity() const PURE;
 
   virtual ClientCommandLineOptionsPtr toClientCommandLineOptions() const PURE;
 };

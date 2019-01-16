@@ -57,18 +57,18 @@ ClientMain::ClientMain(OptionsImpl options)
     : options_(options), time_system_(std::make_unique<Envoy::Event::RealTimeSystem>()) {
   ares_library_init(ARES_LIB_INIT_ALL);
   Envoy::Event::Libevent::Global::initialize();
-  configureComponentLogLevels();
+  configureComponentLogLevels(spdlog::level::from_str(options.verbosity()));
 }
 
 ClientMain::~ClientMain() { ares_library_cleanup(); }
 
-void ClientMain::configureComponentLogLevels() {
+void ClientMain::configureComponentLogLevels(spdlog::level::level_enum level) {
   // We rely on Envoy's logging infra.
   // TODO(oschaaf): Add options to tweak the log level of the various log tags
   // that are available.
-  Envoy::Logger::Registry::setLogLevel(spdlog::level::info);
+  Envoy::Logger::Registry::setLogLevel(level);
   Envoy::Logger::Logger* logger_to_change = Envoy::Logger::Registry::logger("main");
-  logger_to_change->setLevel(spdlog::level::info);
+  logger_to_change->setLevel(level);
 }
 
 bool ClientMain::run() {
@@ -77,7 +77,7 @@ bool ClientMain::run() {
 
   Envoy::Thread::MutexBasicLockable log_lock;
   auto logging_context = std::make_unique<Envoy::Logger::Context>(
-      spdlog::level::info, "[%T.%e][%t][%l][%n]> %v", log_lock);
+      spdlog::level::from_str(options_.verbosity()), "[%T.%f][%t][%L] %v", log_lock);
 
   uint32_t cpu_cores_with_affinity = determine_cpu_cores_with_affinity();
   if (cpu_cores_with_affinity == 0) {
@@ -151,6 +151,15 @@ bool ClientMain::run() {
 
       client->initialize(runtime);
 
+      // We try to offset the start of each thread so that they will be spaced evenly in time
+      // accross a single request. This at least helps a bit for short concurrent high-rps runs.
+      double rate = 1 / double(options_.requests_per_second()) / concurrency;
+      int64_t spread_us = rate * i * 1000000;
+      ENVOY_LOG(debug, "  t{}: Delay start of worker for {} us.", i, spread_us);
+      if (spread_us) {
+        usleep(spread_us);
+      }
+
       // one to warm up.
       client->tryStartOne([&dispatcher] { dispatcher->exit(); });
       dispatcher->run(Envoy::Event::Dispatcher::RunType::Block);
@@ -163,47 +172,24 @@ bool ClientMain::run() {
       Sequencer sequencer(*dispatcher, time_system, rate_limiter, f, options_.duration(),
                           options_.timeout());
 
-      // We try to offset the start of each thread so that they will be spaced evenly in time
-      // accross a single request. This at least helps a bit for short concurrent high-rps runs.
-      double rate = 1 / double(options_.requests_per_second());
-      int64_t spread_us = (rate / concurrency) * i * 1000000;
-      usleep(spread_us);
-
-      sequencer.set_latency_callback([&results, i, this, &streaming_stats, &client, &sequencer,
-                                      &store](std::chrono::nanoseconds latency) {
-        ASSERT(latency.count() > 0);
-        results.push_back(latency.count());
-        streaming_stats.addValue(latency.count());
-
-        // Report results from the first worker about every one second.
-        // TODO(oschaaf): we should only do this in explicit verbose mode because
-        // of introducing locks, probably.
-        // TODO(oschaaf): failures aren't ending up in this callback, so they will
-        // influence timing of this happening.
-        if (((results.size() % options_.requests_per_second()) == 0) && i == 0) {
-          auto foo = store->counters().front();
-          int connection_count = store->counter("nighthawk.upstream_cx_total").value();
-          ENVOY_LOG(trace,
-                    "  t{}: {} completions/sec. #connections: {}. mean: {}us. stdev: {}. "
-                    "connect failures: {}. Replies: Good:{}, Bad:{}. Stream resets: {}. ",
-                    i, sequencer.completions_per_second(), connection_count,
-                    (static_cast<int64_t>(streaming_stats.mean())) / 1000,
-                    (static_cast<int64_t>(streaming_stats.stdev())) / 1000,
-                    client->pool_connect_failures(), client->http_good_response_count(),
-                    client->http_bad_response_count(), client->stream_reset_count());
-        }
-      });
+      sequencer.set_latency_callback(
+          [&results, &streaming_stats](std::chrono::nanoseconds latency) {
+            ASSERT(latency.count() > 0);
+            results.push_back(latency.count());
+            streaming_stats.addValue(latency.count());
+          });
 
       sequencer.start();
       sequencer.waitForCompletion();
 
-      int connection_count = store->counter("nighthawk.upstream_cx_total").value();
       ENVOY_LOG(info,
-                "  t{}: {} completions/sec. #connections: {}. mean: {}us. stdev: {}. "
-                "connect failures: {}. Replies: Good:{}, Bad:{}. Stream resets: {}. ",
-                i, sequencer.completions_per_second(), connection_count,
-                (static_cast<int64_t>(streaming_stats.mean())) / 1000,
-                (static_cast<int64_t>(streaming_stats.stdev())) / 1000,
+                "  t{}: {:.{}f}/second. Mean: {:.{}f}μs. Stdev: "
+                "{:.{}f}μs. "
+                "Connections good/bad: {}/{}. Replies: good/bad:{}/{}. Stream "
+                "resets: {}. ",
+                i, sequencer.completions_per_second(), 2, streaming_stats.mean() / 1000, 2,
+                streaming_stats.stdev() / 1000, 2,
+                store->counter("nighthawk.upstream_cx_total").value(),
                 client->pool_connect_failures(), client->http_good_response_count(),
                 client->http_bad_response_count(), client->stream_reset_count());
       // As we prevent pool overflow failures, we don't expect any.
@@ -229,14 +215,9 @@ bool ClientMain::run() {
     for (int r : results) {
       myfile << (r / 1000) << "\n";
     }
-    double average = std::accumulate(results.begin(), results.end(), 0.0) / results.size();
-    auto minmax = std::minmax_element(results.begin(), results.end());
-    ENVOY_LOG(info, "worker {}: avg latency {}us over {} callbacks. Min/Max: {}/{}.", i,
-              (average / 1000), results.size(), (*(minmax.first) / 1000),
-              (*(minmax.second) / 1000));
   }
-
   myfile.close();
+  ENVOY_LOG(info, "Done. Run './stats.py res.txt benchmark' for hdrhistogram.");
 
   return true;
 }

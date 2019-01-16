@@ -26,6 +26,7 @@ public:
   std::string uri() const override { return uri_; }
   bool h2() const override { return h2_; }
   std::string concurrency() const override { return concurrency_; }
+  virtual std::string verbosity() const override { return verbosity_; };
 
 private:
   uint64_t requests_per_second_;
@@ -35,6 +36,7 @@ private:
   std::string uri_;
   bool h2_;
   std::string concurrency_;
+  std::string verbosity_;
 };
 
 class NoServingException : public NighthawkException {

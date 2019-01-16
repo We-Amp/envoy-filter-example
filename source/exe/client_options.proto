@@ -17,6 +17,8 @@ message ClientCommandLineOptions {
   bool h2 = 5;
   // See :option:`--concurrency` for details.
   string concurrency = 6;
+  // See :option:`--verbosity` for details.
+  string verbosity = 7;
 
-  string uri = 7;
+  string uri = 8;
 }

@@ -26,7 +26,7 @@ private:
   Envoy::Network::Address::InstanceConstSharedPtr target_address_;
 
 private:
-  void configureComponentLogLevels();
+  void configureComponentLogLevels(spdlog::level::level_enum level);
 };
 
 } // namespace Nighthawk

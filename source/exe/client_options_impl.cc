@@ -5,7 +5,8 @@
 namespace Nighthawk {
 
 OptionsImpl::OptionsImpl(int argc, const char* const* argv) {
-  TCLAP::CmdLine cmd("benchmarking", ' ', "PoC");
+  TCLAP::CmdLine cmd("Nighthawk is a web server benchmarking tool.", ' ', "PoC");
+
   TCLAP::ValueArg<uint64_t> requests_per_second("", "rps",
                                                 "The target requests-per-second rate. Default: 5.",
                                                 false, 5 /*default qps*/, "uint64_t", cmd);
@@ -30,6 +31,20 @@ OptionsImpl::OptionsImpl(int argc, const char* const* argv) {
       "run leverage all (aligned) vCPUs. Note that increasing this effectively multiplies "
       "configured --rps and --connection values. Default: 1.",
       false, "1", "string", cmd);
+
+  std::vector<std::string> log_levels;
+  log_levels.push_back("trace");
+  log_levels.push_back("debug");
+  log_levels.push_back("info");
+  log_levels.push_back("warn");
+  log_levels.push_back("error");
+  TCLAP::ValuesConstraint<std::string> verbosities_allowed(log_levels);
+
+  TCLAP::ValueArg<std::string> verbosity(
+      "v", "verbosity",
+      "Verbosity of the output. Possible values: [trace, debug, info, warn, error, critical]. The "
+      "default level is 'info'.",
+      false, "info", &verbosities_allowed, cmd);
 
   TCLAP::UnlabeledValueArg<std::string> uri("uri",
                                             "uri to benchmark. http:// and https:// are supported, "
@@ -60,6 +75,7 @@ OptionsImpl::OptionsImpl(int argc, const char* const* argv) {
   uri_ = uri.getValue();
   h2_ = h2.getValue();
   concurrency_ = concurrency.getValue();
+  verbosity_ = verbosity.getValue();
 }
 
 Nighthawk::ClientCommandLineOptionsPtr OptionsImpl::toClientCommandLineOptions() const {
@@ -73,6 +89,7 @@ Nighthawk::ClientCommandLineOptionsPtr OptionsImpl::toClientCommandLineOptions()
   command_line_options->set_h2(h2());
   command_line_options->set_uri(uri());
   command_line_options->set_concurrency(concurrency());
+  command_line_options->set_verbosity(verbosity());
 
   return command_line_options;
 }
