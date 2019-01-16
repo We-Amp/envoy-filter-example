@@ -29,9 +29,9 @@ void Sequencer::start() {
 void Sequencer::scheduleRun() { periodic_timer_->enableTimer(1ms); }
 
 void Sequencer::stop() {
-  dispatcher_.exit();
   periodic_timer_->disableTimer();
   incidental_timer_->disableTimer();
+  dispatcher_.exit();
 }
 
 void Sequencer::run(bool from_timer) {

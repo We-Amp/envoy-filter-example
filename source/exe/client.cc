@@ -122,6 +122,7 @@ bool ClientMain::run() {
 
     results.reserve(options_.duration().count() * options_.requests_per_second());
 
+    // TODO(oschaaf): properly set up and use ThreadLocal::InstanceImpl.
     auto thread = thread_factory.createThread([&, i]() {
       auto store = std::make_unique<Envoy::Stats::IsolatedStoreImpl>();
       auto api =
@@ -185,15 +186,20 @@ bool ClientMain::run() {
       ENVOY_LOG(info,
                 "  t{}: {:.{}f}/second. Mean: {:.{}f}μs. Stdev: "
                 "{:.{}f}μs. "
-                "Connections good/bad: {}/{}. Replies: good/bad:{}/{}. Stream "
+                "Connections good/bad/overflow: {}/{}/{}. Replies: good/fail:{}/{}. Stream "
                 "resets: {}. ",
                 i, sequencer.completions_per_second(), 2, streaming_stats.mean() / 1000, 2,
                 streaming_stats.stdev() / 1000, 2,
                 store->counter("nighthawk.upstream_cx_total").value(),
-                client->pool_connect_failures(), client->http_good_response_count(),
+                store->counter("nighthawk.upstream_cx_connect_fail").value(),
+                // upstream_cx_overflow will have a very high (inflated) number because
+                // of BenchmarkClient's usage pattern. We track the overflow failures
+                // via the callback, wich is more interesting. We expect this to remain
+                // 0 most of the time, because we do the gating ourselves in
+                // BenchmarkHttpClient::tryStartOne and we have max 1 pending request
+                // configured.
+                client->pool_overflow_failures(), client->http_good_response_count(),
                 client->http_bad_response_count(), client->stream_reset_count());
-      // As we prevent pool overflow failures, we don't expect any.
-      ASSERT(!client->pool_overflow_failures());
       client.reset();
       // TODO(oschaaf): shouldn't be doing this here.
       tls.shutdownGlobalThreading();

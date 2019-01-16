@@ -37,7 +37,6 @@ public:
   // StreamDecoderCompletionCallback
   void onComplete(bool success, const Envoy::Http::HeaderMap& headers) override;
 
-  uint64_t pool_connect_failures() { return pool_connect_failures_; }
   uint64_t pool_overflow_failures() { return pool_overflow_failures_; }
   uint64_t stream_reset_count() { return stream_reset_count_; }
   uint64_t http_good_response_count() { return http_good_response_count_; }
@@ -68,7 +67,6 @@ private:
   std::chrono::seconds timeout_;
   uint64_t connection_limit_;
   uint64_t max_pending_requests_;
-  uint64_t pool_connect_failures_;
   uint64_t pool_overflow_failures_;
   Envoy::Http::ConnectionPool::InstancePtr pool_;
   Envoy::Event::TimerPtr timer_;
