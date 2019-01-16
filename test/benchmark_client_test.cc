@@ -286,8 +286,8 @@ TEST_P(BenchmarkClientTest, SequencedH2Test) {
   // TODO(oschaaf): create an interface that pulls this from implementations upon implementation.
   SequencerTarget f = std::bind(&BenchmarkHttpClient::tryStartOne, &client, std::placeholders::_1);
 
-  LinearRateLimiter rate_limiter(time_system_, 10ms);
-  std::chrono::milliseconds duration(59ms);
+  LinearRateLimiter rate_limiter(time_system_, 1000ms);
+  std::chrono::milliseconds duration(5999ms);
   Sequencer sequencer(*dispatcher_, time_system_, rate_limiter, f, duration, 10s);
 
   sequencer.start();
@@ -298,7 +298,7 @@ TEST_P(BenchmarkClientTest, SequencedH2Test) {
   EXPECT_EQ(0, client.stream_reset_count());
   EXPECT_EQ(0, client.pool_overflow_failures());
 
-  // We expect all responses to get in within the 9 ms slack we gave it.
+  // We expect all responses to get in within the 999 ms slack we gave it.
   // TODO(oschaaf): under valgrind, on some systems, we overshoot here,
   // hence the EXPECT_LE.
   EXPECT_LE(5, client.http_good_response_count());
