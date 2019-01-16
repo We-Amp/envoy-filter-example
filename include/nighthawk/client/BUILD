@@ -13,6 +13,7 @@ envoy_basic_cc_library(
     name = "client_includes",
     hdrs = [
         "client_options.h",
+        "worker.h",
     ],
     include_prefix = "nighthawk/client",
 )

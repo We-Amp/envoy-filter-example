@@ -6,6 +6,9 @@
 #include "envoy/network/address.h"
 #include "envoy/stats/store.h"
 
+#include "nighthawk/client/worker.h"
+
+// TODO(oschaaf): change to use interfaces here.
 #include "exe/client_options_impl.h"
 #include "exe/stream_decoder.h"
 
@@ -24,8 +27,7 @@ private:
   std::unique_ptr<Envoy::Event::TimeSystem> time_system_;
   std::unique_ptr<Envoy::Logger::Context> logging_context_;
   Envoy::Network::Address::InstanceConstSharedPtr target_address_;
-
-private:
+  Client::WorkerPtr worker_;
   void configureComponentLogLevels(spdlog::level::level_enum level);
 };
 
