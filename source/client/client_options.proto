@@ -1,10 +1,10 @@
 syntax = "proto3";
 
-package nighthawk;
+package nighthawk.client;
 
 import "google/protobuf/duration.proto";
 
-message ClientCommandLineOptions {
+message CommandLineOptions {
   // See :option:`--rps` for details.
   uint64 requests_per_second = 1;
   // See :option:`--connections` for details.

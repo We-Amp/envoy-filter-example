@@ -10,7 +10,7 @@
 namespace Nighthawk {
 namespace Client {
 
-typedef std::unique_ptr<nighthawk::ClientCommandLineOptions> ClientCommandLineOptionsPtr;
+typedef std::unique_ptr<nighthawk::client::CommandLineOptions> CommandLineOptionsPtr;
 
 class Options {
 public:
@@ -25,7 +25,7 @@ public:
   virtual std::string concurrency() const PURE;
   virtual std::string verbosity() const PURE;
 
-  virtual ClientCommandLineOptionsPtr toClientCommandLineOptions() const PURE;
+  virtual CommandLineOptionsPtr toCommandLineOptions() const PURE;
 };
 
 } // namespace Client

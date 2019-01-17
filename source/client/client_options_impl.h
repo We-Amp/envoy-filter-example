@@ -11,13 +11,13 @@
 
 namespace Nighthawk {
 
-typedef std::unique_ptr<nighthawk::ClientCommandLineOptions> NighthawkClientCommandLineOptionsPtr;
+typedef std::unique_ptr<nighthawk::client::CommandLineOptions> NighthawkCommandLineOptionsPtr;
 
 class OptionsImpl : public Client::Options {
 public:
   OptionsImpl(int argc, const char* const* argv);
 
-  virtual Client::ClientCommandLineOptionsPtr toClientCommandLineOptions() const override;
+  virtual Client::CommandLineOptionsPtr toCommandLineOptions() const override;
 
   uint64_t requests_per_second() const override { return requests_per_second_; }
   uint64_t connections() const override { return connections_; }
