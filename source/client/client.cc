@@ -17,6 +17,7 @@
 #include "common/stats/isolated_store_impl.h"
 
 #include "client/benchmark_client.h"
+#include "client/options_impl.h"
 #include "client/rate_limiter.h"
 #include "client/sequencer.h"
 #include "client/streaming_stats.h"
@@ -52,13 +53,13 @@ uint32_t determine_cpu_cores_with_affinity() {
 } // namespace
 
 ClientMain::ClientMain(int argc, const char* const* argv)
-    : ClientMain(Client::OptionsImpl(argc, argv)) {}
+    : ClientMain(std::make_unique<Client::OptionsImpl>(argc, argv)) {}
 
-ClientMain::ClientMain(Client::OptionsImpl options)
-    : options_(options), time_system_(std::make_unique<Envoy::Event::RealTimeSystem>()) {
+ClientMain::ClientMain(Client::OptionsPtr options)
+    : options_(std::move(options)), time_system_(std::make_unique<Envoy::Event::RealTimeSystem>()) {
   ares_library_init(ARES_LIB_INIT_ALL);
   Envoy::Event::Libevent::Global::initialize();
-  configureComponentLogLevels(spdlog::level::from_str(options.verbosity()));
+  configureComponentLogLevels(spdlog::level::from_str(options->verbosity()));
 }
 
 ClientMain::~ClientMain() { ares_library_cleanup(); }
@@ -78,7 +79,7 @@ bool ClientMain::run() {
 
   Envoy::Thread::MutexBasicLockable log_lock;
   auto logging_context = std::make_unique<Envoy::Logger::Context>(
-      spdlog::level::from_str(options_.verbosity()), "[%T.%f][%t][%L] %v", log_lock);
+      spdlog::level::from_str(options_->verbosity()), "[%T.%f][%t][%L] %v", log_lock);
 
   uint32_t cpu_cores_with_affinity = determine_cpu_cores_with_affinity();
   if (cpu_cores_with_affinity == 0) {
@@ -86,13 +87,13 @@ bool ClientMain::run() {
     cpu_cores_with_affinity = std::thread::hardware_concurrency();
   }
 
-  bool autoscale = options_.concurrency() == "auto";
+  bool autoscale = options_->concurrency() == "auto";
   // TODO(oschaaf): concurrency is a string option, this needs more sanity checking.
   // The default for concurrency is one, in which case these warnings cannot show up.
   // TODO(oschaaf): Maybe, in the case where the concurrency flag is left out, but
   // affinity is set / we don't have affinity with all cores, we should default to autoscale.
   // (e.g. we are called via taskset).
-  uint32_t concurrency = autoscale ? cpu_cores_with_affinity : std::stoi(options_.concurrency());
+  uint32_t concurrency = autoscale ? cpu_cores_with_affinity : std::stoi(options_->concurrency());
 
   // We're going to fire up #concurrency benchmark loops and wait for them to complete.
   std::vector<Envoy::Thread::ThreadPtr> threads;
@@ -107,13 +108,13 @@ bool ClientMain::run() {
   }
 
   ENVOY_LOG(info, "Starting {} threads / event loops. Test duration: {} seconds.", concurrency,
-            options_.duration().count());
+            options_->duration().count());
   ENVOY_LOG(info, "Global targets: {} connections and {} calls per second.",
-            options_.connections() * concurrency, options_.requests_per_second() * concurrency);
+            options_->connections() * concurrency, options_->requests_per_second() * concurrency);
 
   if (concurrency > 1) {
     ENVOY_LOG(info, "   (Per-worker targets: {} connections and {} calls per second)",
-              options_.connections(), options_.requests_per_second());
+              options_->connections(), options_->requests_per_second());
   }
 
   for (uint32_t i = 0; i < concurrency; i++) {
@@ -121,7 +122,7 @@ bool ClientMain::run() {
     std::vector<uint64_t>& results = global_results.at(i);
     // TODO(oschaaf): get us a stats sink.
 
-    results.reserve(options_.duration().count() * options_.requests_per_second());
+    results.reserve(options_->duration().count() * options_->requests_per_second());
 
     // TODO(oschaaf): properly set up and use ThreadLocal::InstanceImpl.
     auto thread = thread_factory.createThread([&, i]() {
@@ -146,16 +147,16 @@ bool ClientMain::run() {
       // sense to pass it in here, least that should be done is let the BenchmarkHttpClient
       // contruct it itself if we go down that road.
       auto client =
-          std::make_unique<BenchmarkHttpClient>(*dispatcher, *store, time_system, options_.uri(),
-                                                std::move(request_headers), options_.h2());
-      client->set_connection_timeout(options_.timeout());
-      client->set_connection_limit(options_.connections());
+          std::make_unique<BenchmarkHttpClient>(*dispatcher, *store, time_system, options_->uri(),
+                                                std::move(request_headers), options_->h2());
+      client->set_connection_timeout(options_->timeout());
+      client->set_connection_limit(options_->connections());
 
       client->initialize(runtime);
 
       // We try to offset the start of each thread so that they will be spaced evenly in time
       // accross a single request. This at least helps a bit for short concurrent high-rps runs.
-      double rate = 1 / double(options_.requests_per_second()) / concurrency;
+      double rate = 1 / double(options_->requests_per_second()) / concurrency;
       int64_t spread_us = rate * i * 1000000;
       ENVOY_LOG(debug, "  t{}: Delay start of worker for {} us.", i, spread_us);
       if (spread_us) {
@@ -168,11 +169,11 @@ bool ClientMain::run() {
 
       // With the linear rate limiter, we run an open-loop test, where we initiate new
       // calls regardless of the number of comletions we observe keeping up.
-      LinearRateLimiter rate_limiter(time_system, 1000000000ns / options_.requests_per_second());
+      LinearRateLimiter rate_limiter(time_system, 1000000000ns / options_->requests_per_second());
       SequencerTarget f =
           std::bind(&BenchmarkHttpClient::tryStartOne, client.get(), std::placeholders::_1);
-      Sequencer sequencer(*dispatcher, time_system, rate_limiter, f, options_.duration(),
-                          options_.timeout());
+      Sequencer sequencer(*dispatcher, time_system, rate_limiter, f, options_->duration(),
+                          options_->timeout());
 
       sequencer.set_latency_callback(
           [&results, &streaming_stats](std::chrono::nanoseconds latency) {

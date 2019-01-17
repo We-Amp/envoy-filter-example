@@ -28,5 +28,7 @@ public:
   virtual CommandLineOptionsPtr toCommandLineOptions() const PURE;
 };
 
+typedef std::unique_ptr<Options> OptionsPtr;
+
 } // namespace Client
 } // namespace Nighthawk
