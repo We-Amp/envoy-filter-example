@@ -20,7 +20,7 @@ load("@envoy//bazel:repositories.bzl", "PPC_SKIP_TARGETS")
 
 api_proto_library_internal(
     name = "benchmark_options",
-    srcs = ["client_options.proto"],
+    srcs = ["options.proto"],
     visibility = ["//visibility:public"],
 )
 
@@ -29,7 +29,7 @@ envoy_cc_library(
     srcs = [
         "client.cc",
         "stream_decoder.cc",
-	      "client_options_impl.cc",
+	      "options_impl.cc",
         "benchmark_client.cc",
         "rate_limiter.cc",
         "sequencer.cc",
@@ -38,7 +38,7 @@ envoy_cc_library(
     hdrs = [
         "client.h",
         "stream_decoder.h",
-    	"client_options_impl.h",
+    	"options_impl.h",
         "ssl.h",
         "benchmark_client.h",
         "rate_limiter.h",
