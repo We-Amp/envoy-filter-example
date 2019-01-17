@@ -193,9 +193,9 @@ INSTANTIATE_TEST_CASE_P(IpVersions, BenchmarkClientTest,
 TEST_P(BenchmarkClientTest, BasicTestH1WithRequestQueue) {
   Envoy::Http::HeaderMapImplPtr request_headers = std::make_unique<Envoy::Http::HeaderMapImpl>();
   request_headers->insertMethod().value(Envoy::Http::Headers::get().MethodValues.Get);
-  BenchmarkHttpClient client(*dispatcher_, store_, time_system_,
-                             fmt::format("http://{}/", getTestServerHostAndPort()),
-                             std::move(request_headers), false /*use h2*/);
+  Client::BenchmarkHttpClient client(*dispatcher_, store_, time_system_,
+                                     fmt::format("http://{}/", getTestServerHostAndPort()),
+                                     std::move(request_headers), false /*use h2*/);
 
   int amount = 10;
   int inflight_response_count = 0;
@@ -221,7 +221,6 @@ TEST_P(BenchmarkClientTest, BasicTestH1WithRequestQueue) {
   }
 
   EXPECT_EQ(amount, inflight_response_count);
-
   dispatcher_->run(Envoy::Event::Dispatcher::RunType::Block);
 
   EXPECT_EQ(0, inflight_response_count);
@@ -235,9 +234,9 @@ TEST_P(BenchmarkClientTest, BasicTestH1WithRequestQueue) {
 TEST_P(BenchmarkClientTest, BasicTestH1WithoutRequestQueue) {
   Envoy::Http::HeaderMapImplPtr request_headers = std::make_unique<Envoy::Http::HeaderMapImpl>();
   request_headers->insertMethod().value(Envoy::Http::Headers::get().MethodValues.Get);
-  BenchmarkHttpClient client(*dispatcher_, store_, time_system_,
-                             fmt::format("http://{}/", getTestServerHostAndPort()),
-                             std::move(request_headers), false /*use h2*/);
+  Client::BenchmarkHttpClient client(*dispatcher_, store_, time_system_,
+                                     fmt::format("http://{}/", getTestServerHostAndPort()),
+                                     std::move(request_headers), false /*use h2*/);
 
   client.set_connection_timeout(1s);
   client.set_max_pending_requests(1);
@@ -278,13 +277,14 @@ TEST_P(BenchmarkClientTest, SequencedH2Test) {
   Envoy::Http::HeaderMapImplPtr request_headers = std::make_unique<Envoy::Http::HeaderMapImpl>();
   request_headers->insertMethod().value(Envoy::Http::Headers::get().MethodValues.Get);
 
-  BenchmarkHttpClient client(*dispatcher_, store_, time_system_,
-                             fmt::format("https://{}/", getTestServerHostAndSslPort()),
-                             std::move(request_headers), true /*use h2*/);
+  Client::BenchmarkHttpClient client(*dispatcher_, store_, time_system_,
+                                     fmt::format("https://{}/", getTestServerHostAndSslPort()),
+                                     std::move(request_headers), true /*use h2*/);
   client.initialize(runtime_);
 
   // TODO(oschaaf): create an interface that pulls this from implementations upon implementation.
-  SequencerTarget f = std::bind(&BenchmarkHttpClient::tryStartOne, &client, std::placeholders::_1);
+  SequencerTarget f =
+      std::bind(&Client::BenchmarkHttpClient::tryStartOne, &client, std::placeholders::_1);
 
   LinearRateLimiter rate_limiter(time_system_, 1000ms);
   std::chrono::milliseconds duration(5999ms);

@@ -9,7 +9,8 @@ load(
 
 envoy_cc_test(
     name = "nighthawk_test",
-    srcs = ["options_test.cc",
+    srcs = [
+        "options_test.cc",
         "benchmark_http_client_test.cc",
         "rate_limiter_test.cc",
         "sequencer_test.cc",
