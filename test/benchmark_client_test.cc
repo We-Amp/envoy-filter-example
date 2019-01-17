@@ -16,7 +16,7 @@
 #include "common/runtime/runtime_impl.h"
 #include "common/stats/isolated_store_impl.h"
 
-#include "client/benchmark_client.h"
+#include "client/benchmark_http_client.h"
 #include "common/rate_limiter.h"
 #include "common/sequencer.h"
 

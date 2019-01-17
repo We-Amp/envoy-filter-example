@@ -12,7 +12,7 @@
 namespace Nighthawk {
 namespace Client {
 
-class OptionsImpl : public Client::Options {
+class OptionsImpl : public Options {
 public:
   OptionsImpl(int argc, const char* const* argv);
 

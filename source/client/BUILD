@@ -29,12 +29,12 @@ envoy_cc_library(
     srcs = [
         "client.cc",
 	    "options_impl.cc",
-        "benchmark_client.cc",
+        "benchmark_http_client.cc",
     ],
     hdrs = [
         "client.h",
     	"options_impl.h",
-        "benchmark_client.h",
+        "benchmark_http_client.h",
     ],
     visibility = ["//visibility:public"],
     repository = "@envoy",

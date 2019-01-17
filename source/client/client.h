@@ -10,22 +10,24 @@
 #include "nighthawk/client/worker.h"
 
 namespace Nighthawk {
+namespace Client {
 
-class ClientMain : public Envoy::Logger::Loggable<Envoy::Logger::Id::main> {
+class Main : public Envoy::Logger::Loggable<Envoy::Logger::Id::main> {
 public:
-  ClientMain(int argc, const char* const* argv);
-  ClientMain(Client::OptionsPtr&& options);
-  ~ClientMain();
+  Main(int argc, const char* const* argv);
+  Main(Client::OptionsPtr&& options);
+  ~Main();
 
   bool run();
 
 private:
-  Client::OptionsPtr options_;
+  OptionsPtr options_;
   std::unique_ptr<Envoy::Event::TimeSystem> time_system_;
   std::unique_ptr<Envoy::Logger::Context> logging_context_;
   Envoy::Network::Address::InstanceConstSharedPtr target_address_;
-  Client::WorkerPtr worker_;
+  WorkerPtr worker_;
   void configureComponentLogLevels(spdlog::level::level_enum level);
 };
 
+} // namespace Client
 } // namespace Nighthawk

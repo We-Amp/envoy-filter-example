@@ -15,6 +15,7 @@
 #include "common/stream_decoder.h"
 
 namespace Nighthawk {
+namespace Client {
 
 class BenchmarkHttpClient : public Nighthawk::Http::StreamDecoderCompletionCallback,
                             public Envoy::Logger::Loggable<Envoy::Logger::Id::main>,
@@ -74,6 +75,7 @@ private:
   uint64_t stream_reset_count_;
   uint64_t http_good_response_count_;
   uint64_t http_bad_response_count_;
-}; // namespace Nighthawk
+};
 
+} // namespace Client
 } // namespace Nighthawk

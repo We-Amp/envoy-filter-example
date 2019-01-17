@@ -16,7 +16,7 @@
 #include "common/network/utility.h"
 #include "common/stats/isolated_store_impl.h"
 
-#include "client/benchmark_client.h"
+#include "client/benchmark_http_client.h"
 #include "client/options_impl.h"
 #include "common/rate_limiter.h"
 #include "common/sequencer.h"
@@ -25,7 +25,7 @@
 using namespace std::chrono_literals;
 
 namespace Nighthawk {
-
+namespace Client {
 namespace {
 
 // returns 0 on failure. returns the number of HW CPU's
@@ -52,19 +52,19 @@ uint32_t determine_cpu_cores_with_affinity() {
 
 } // namespace
 
-ClientMain::ClientMain(int argc, const char* const* argv)
-    : ClientMain(std::make_unique<Client::OptionsImpl>(argc, argv)) {}
+Main::Main(int argc, const char* const* argv)
+    : Main(std::make_unique<Client::OptionsImpl>(argc, argv)) {}
 
-ClientMain::ClientMain(Client::OptionsPtr&& options)
+Main::Main(Client::OptionsPtr&& options)
     : options_(std::move(options)), time_system_(std::make_unique<Envoy::Event::RealTimeSystem>()) {
   ares_library_init(ARES_LIB_INIT_ALL);
   Envoy::Event::Libevent::Global::initialize();
   configureComponentLogLevels(spdlog::level::from_str(options_->verbosity()));
 }
 
-ClientMain::~ClientMain() { ares_library_cleanup(); }
+Main::~Main() { ares_library_cleanup(); }
 
-void ClientMain::configureComponentLogLevels(spdlog::level::level_enum level) {
+void Main::configureComponentLogLevels(spdlog::level::level_enum level) {
   // We rely on Envoy's logging infra.
   // TODO(oschaaf): Add options to tweak the log level of the various log tags
   // that are available.
@@ -73,7 +73,7 @@ void ClientMain::configureComponentLogLevels(spdlog::level::level_enum level) {
   logger_to_change->setLevel(level);
 }
 
-bool ClientMain::run() {
+bool Main::run() {
   // TODO(oschaaf): platform specificity need addressing.
   auto thread_factory = Envoy::Thread::ThreadFactoryImplPosix();
 
@@ -230,4 +230,5 @@ bool ClientMain::run() {
   return true;
 }
 
+} // namespace Client
 } // namespace Nighthawk

@@ -12,10 +12,10 @@ int main(int argc, char** argv) {
   // handling, such as running in a chroot jail.
   absl::InitializeSymbolizer(argv[0]);
 #endif
-  std::unique_ptr<Nighthawk::ClientMain> client;
+  std::unique_ptr<Nighthawk::Client::Main> client;
 
   try {
-    client = std::make_unique<Nighthawk::ClientMain>(argc, argv);
+    client = std::make_unique<Nighthawk::Client::Main>(argc, argv);
   } catch (const Nighthawk::Client::NoServingException& e) {
     return EXIT_SUCCESS;
   } catch (const Nighthawk::Client::MalformedArgvException& e) {

@@ -79,8 +79,8 @@ OptionsImpl::OptionsImpl(int argc, const char* const* argv) {
   verbosity_ = verbosity.getValue();
 }
 
-Client::CommandLineOptionsPtr OptionsImpl::toCommandLineOptions() const {
-  Client::CommandLineOptionsPtr command_line_options =
+CommandLineOptionsPtr OptionsImpl::toCommandLineOptions() const {
+  CommandLineOptionsPtr command_line_options =
       std::make_unique<nighthawk::client::CommandLineOptions>();
 
   command_line_options->set_connections(connections());

@@ -1,4 +1,4 @@
-#include "client/benchmark_client.h"
+#include "client/benchmark_http_client.h"
 
 #include "common/http/utility.h"
 #include "common/network/utility.h"
@@ -26,6 +26,7 @@
 using namespace std::chrono_literals;
 
 namespace Nighthawk {
+namespace Client {
 
 BenchmarkHttpClient::BenchmarkHttpClient(Envoy::Event::Dispatcher& dispatcher,
                                          Envoy::Stats::Store& store, Envoy::TimeSource& time_source,
@@ -179,4 +180,5 @@ void BenchmarkHttpClient::onPoolReady(Envoy::Http::StreamEncoder& encoder,
   encoder.encodeHeaders(*request_headers_, true);
 }
 
+} // namespace Client
 } // namespace Nighthawk
