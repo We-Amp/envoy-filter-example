@@ -9,8 +9,6 @@
 #include "nighthawk/client/options.h"
 #include "nighthawk/client/worker.h"
 
-#include "client/stream_decoder.h"
-
 namespace Nighthawk {
 
 class ClientMain : public Envoy::Logger::Loggable<Envoy::Logger::Id::main> {

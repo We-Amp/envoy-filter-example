@@ -1,4 +1,4 @@
-#include "client/rate_limiter.h"
+#include "common/rate_limiter.h"
 
 #include "nighthawk/common/exception.h"
 

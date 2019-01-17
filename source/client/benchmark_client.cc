@@ -12,18 +12,16 @@
 #include "common/event/dispatcher_impl.h"
 #include "common/http/header_map_impl.h"
 #include "common/http/headers.h"
+#include "common/http/http1/conn_pool.h"
+#include "common/http/http2/conn_pool.h"
 #include "common/network/raw_buffer_socket.h"
 #include "common/network/utility.h"
-
 #include "common/runtime/runtime_impl.h"
 #include "common/thread_local/thread_local_impl.h"
 #include "common/upstream/cluster_manager_impl.h"
 
-#include "common/http/http1/conn_pool.h"
-#include "common/http/http2/conn_pool.h"
-
-#include "client/ssl.h"
-#include "client/stream_decoder.h"
+#include "common/ssl.h"
+#include "common/stream_decoder.h"
 
 using namespace std::chrono_literals;
 

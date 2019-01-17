@@ -12,7 +12,7 @@
 #include "envoy/stats/store.h"
 #include "envoy/upstream/upstream.h"
 
-#include "client/stream_decoder.h"
+#include "common/stream_decoder.h"
 
 namespace Nighthawk {
 

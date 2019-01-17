@@ -18,9 +18,9 @@
 
 #include "client/benchmark_client.h"
 #include "client/options_impl.h"
-#include "client/rate_limiter.h"
-#include "client/sequencer.h"
-#include "client/streaming_stats.h"
+#include "common/rate_limiter.h"
+#include "common/sequencer.h"
+#include "common/streaming_stats.h"
 
 using namespace std::chrono_literals;
 

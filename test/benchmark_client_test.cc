@@ -17,8 +17,8 @@
 #include "common/stats/isolated_store_impl.h"
 
 #include "client/benchmark_client.h"
-#include "client/rate_limiter.h"
-#include "client/sequencer.h"
+#include "common/rate_limiter.h"
+#include "common/sequencer.h"
 
 #include "test/integration/integration.h"
 #include "test/integration/utility.h"
