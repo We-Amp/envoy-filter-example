@@ -37,7 +37,9 @@ BenchmarkHttpClient::BenchmarkHttpClient(Envoy::Event::Dispatcher& dispatcher,
       request_headers_(std::move(request_headers)), use_h2_(use_h2), is_https_(false), host_(""),
       port_(0), path_("/"), dns_failure_(true), timeout_(5s), connection_limit_(1),
       max_pending_requests_(1), pool_overflow_failures_(0), stream_reset_count_(0),
-      http_good_response_count_(0), http_bad_response_count_(0) {
+      http_good_response_count_(0), http_bad_response_count_(0),
+      requests_completed_(0), requests_initiated_(0)
+       {
 
   // parse incoming uri into fields that we need.
   // TODO(oschaaf): refactor. also input validation, etc.
@@ -137,17 +139,21 @@ void BenchmarkHttpClient::initialize(Envoy::Runtime::LoaderImpl& runtime) {
 bool BenchmarkHttpClient::tryStartOne(std::function<void()> caller_completion_callback) {
   if (!cluster_->resourceManager(Envoy::Upstream::ResourcePriority::Default)
            .pendingRequests()
-           .canCreate()) {
+           .canCreate() ||           
+           (requests_initiated_ - requests_completed_) >= connection_limit_           
+           ) {
     return false;
   }
 
   auto stream_decoder = new Nighthawk::Http::StreamDecoder(caller_completion_callback, *this);
+  requests_initiated_++;
   pool_->newStream(*stream_decoder, *this);
 
   return true;
 }
 
 void BenchmarkHttpClient::onComplete(bool success, const Envoy::Http::HeaderMap& headers) {
+  requests_completed_++;
   if (!success) {
     stream_reset_count_++;
   } else {

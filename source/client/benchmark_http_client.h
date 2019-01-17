@@ -75,6 +75,9 @@ private:
   uint64_t stream_reset_count_;
   uint64_t http_good_response_count_;
   uint64_t http_bad_response_count_;
+  uint64_t requests_completed_;
+  uint64_t requests_initiated_;
+
 };
 
 } // namespace Client
