@@ -22,7 +22,7 @@ envoy_cc_test(
     deps = [
         "@envoy//test/integration:integration_lib",
         "@envoy//test/server:utility_lib",
-        "//source/exe:nighthawk_client_common_lib",
+        "//source/client:nighthawk_client_common_lib",
     ],
 )
 

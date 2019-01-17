@@ -16,9 +16,9 @@
 #include "common/runtime/runtime_impl.h"
 #include "common/stats/isolated_store_impl.h"
 
-#include "exe/benchmark_client.h"
-#include "exe/rate_limiter.h"
-#include "exe/sequencer.h"
+#include "client/benchmark_client.h"
+#include "client/rate_limiter.h"
+#include "client/sequencer.h"
 
 #include "test/integration/integration.h"
 #include "test/integration/utility.h"

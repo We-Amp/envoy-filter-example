@@ -12,8 +12,8 @@
 
 #include "nighthawk/common/exception.h"
 
-#include "exe/rate_limiter.h"
-#include "exe/sequencer.h"
+#include "client/rate_limiter.h"
+#include "client/sequencer.h"
 
 using namespace std::chrono_literals;
 

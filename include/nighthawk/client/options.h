@@ -5,7 +5,7 @@
 #include <string>
 
 #include "envoy/common/pure.h"
-#include "source/exe/client_options.pb.h"
+#include "source/client/client_options.pb.h"
 
 namespace Nighthawk {
 namespace Client {

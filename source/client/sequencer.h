@@ -6,7 +6,7 @@
 #include "envoy/event/timer.h"
 #include "envoy/runtime/runtime.h"
 
-#include "exe/rate_limiter.h"
+#include "client/rate_limiter.h"
 
 namespace Nighthawk {
 

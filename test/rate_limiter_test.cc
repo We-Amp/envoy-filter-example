@@ -6,7 +6,7 @@
 
 #include "nighthawk/common/exception.h"
 
-#include "exe/rate_limiter.h"
+#include "client/rate_limiter.h"
 
 using namespace std::chrono_literals;
 

@@ -9,8 +9,8 @@
 #include "nighthawk/client/worker.h"
 
 // TODO(oschaaf): change to use interfaces here.
-#include "exe/client_options_impl.h"
-#include "exe/stream_decoder.h"
+#include "client/client_options_impl.h"
+#include "client/stream_decoder.h"
 
 namespace Nighthawk {
 

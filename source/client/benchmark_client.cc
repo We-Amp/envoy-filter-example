@@ -1,4 +1,4 @@
-#include "exe/benchmark_client.h"
+#include "client/benchmark_client.h"
 
 #include "common/http/utility.h"
 #include "common/network/utility.h"
@@ -22,8 +22,8 @@
 #include "common/http/http1/conn_pool.h"
 #include "common/http/http2/conn_pool.h"
 
-#include "exe/ssl.h"
-#include "exe/stream_decoder.h"
+#include "client/ssl.h"
+#include "client/stream_decoder.h"
 
 using namespace std::chrono_literals;
 

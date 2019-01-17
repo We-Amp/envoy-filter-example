@@ -1,4 +1,4 @@
-#include "exe/client.h"
+#include "client/client.h"
 
 #include <chrono>
 #include <fstream>
@@ -16,10 +16,10 @@
 #include "common/network/utility.h"
 #include "common/stats/isolated_store_impl.h"
 
-#include "exe/benchmark_client.h"
-#include "exe/rate_limiter.h"
-#include "exe/sequencer.h"
-#include "exe/streaming_stats.h"
+#include "client/benchmark_client.h"
+#include "client/rate_limiter.h"
+#include "client/sequencer.h"
+#include "client/streaming_stats.h"
 
 using namespace std::chrono_literals;
 
