@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <string>
 
-#include "nighthawk/client/client_options.h"
+#include "nighthawk/client/options.h"
 #include "nighthawk/common/exception.h"
 
 #include "source/exe/client_options.pb.h"
@@ -13,11 +13,11 @@ namespace Nighthawk {
 
 typedef std::unique_ptr<nighthawk::ClientCommandLineOptions> NighthawkClientCommandLineOptionsPtr;
 
-class OptionsImpl : public Nighthawk::Options {
+class OptionsImpl : public Client::Options {
 public:
   OptionsImpl(int argc, const char* const* argv);
 
-  virtual ClientCommandLineOptionsPtr toClientCommandLineOptions() const override;
+  virtual Client::ClientCommandLineOptionsPtr toClientCommandLineOptions() const override;
 
   uint64_t requests_per_second() const override { return requests_per_second_; }
   uint64_t connections() const override { return connections_; }

@@ -8,6 +8,7 @@
 #include "source/exe/client_options.pb.h"
 
 namespace Nighthawk {
+namespace Client {
 
 typedef std::unique_ptr<nighthawk::ClientCommandLineOptions> ClientCommandLineOptionsPtr;
 
@@ -27,4 +28,5 @@ public:
   virtual ClientCommandLineOptionsPtr toClientCommandLineOptions() const PURE;
 };
 
+} // namespace Client
 } // namespace Nighthawk

@@ -225,7 +225,7 @@ TEST_P(BenchmarkClientTest, BasicTestH1WithRequestQueue) {
   dispatcher_->run(Envoy::Event::Dispatcher::RunType::Block);
 
   EXPECT_EQ(0, inflight_response_count);
-  EXPECT_EQ(0, client.pool_connect_failures());
+  EXPECT_EQ(0, store_.counter("nighthawk.upstream_cx_connect_fail").value());
   EXPECT_EQ(0, client.http_bad_response_count());
   EXPECT_EQ(0, client.stream_reset_count());
   EXPECT_EQ(0, client.pool_overflow_failures());
@@ -264,7 +264,7 @@ TEST_P(BenchmarkClientTest, BasicTestH1WithoutRequestQueue) {
   dispatcher_->run(Envoy::Event::Dispatcher::RunType::Block);
 
   EXPECT_EQ(0, inflight_response_count);
-  EXPECT_EQ(0, client.pool_connect_failures());
+  EXPECT_EQ(0, store_.counter("nighthawk.upstream_cx_connect_fail").value());
   EXPECT_EQ(0, client.http_bad_response_count());
   EXPECT_EQ(0, client.stream_reset_count());
   // We throttle before the pool, so we expect no pool overflows.
@@ -293,7 +293,7 @@ TEST_P(BenchmarkClientTest, SequencedH2Test) {
   sequencer.start();
   sequencer.waitForCompletion();
 
-  EXPECT_EQ(0, client.pool_connect_failures());
+  EXPECT_EQ(0, store_.counter("nighthawk.upstream_cx_connect_fail").value());
   EXPECT_EQ(0, client.http_bad_response_count());
   EXPECT_EQ(0, client.stream_reset_count());
   EXPECT_EQ(0, client.pool_overflow_failures());
