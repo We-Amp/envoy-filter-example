@@ -17,13 +17,13 @@ namespace Nighthawk {
 class ClientMain : public Envoy::Logger::Loggable<Envoy::Logger::Id::main> {
 public:
   ClientMain(int argc, const char* const* argv);
-  ClientMain(OptionsImpl options);
+  ClientMain(Client::OptionsImpl options);
   ~ClientMain();
 
   bool run();
 
 private:
-  Nighthawk::OptionsImpl options_;
+  Client::OptionsImpl options_;
   std::unique_ptr<Envoy::Event::TimeSystem> time_system_;
   std::unique_ptr<Envoy::Logger::Context> logging_context_;
   Envoy::Network::Address::InstanceConstSharedPtr target_address_;

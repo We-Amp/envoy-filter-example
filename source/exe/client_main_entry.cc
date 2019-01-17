@@ -2,6 +2,8 @@
 
 #include "absl/debugging/symbolize.h"
 
+#include "nighthawk/common/exception.h"
+
 // NOLINT(namespace-nighthawk)
 
 int main(int argc, char** argv) {
@@ -14,9 +16,9 @@ int main(int argc, char** argv) {
 
   try {
     client = std::make_unique<Nighthawk::ClientMain>(argc, argv);
-  } catch (const Nighthawk::NoServingException& e) {
+  } catch (const Nighthawk::Client::NoServingException& e) {
     return EXIT_SUCCESS;
-  } catch (const Nighthawk::MalformedArgvException& e) {
+  } catch (const Nighthawk::Client::MalformedArgvException& e) {
     return EXIT_FAILURE;
   } catch (const Nighthawk::NighthawkException& e) {
     return EXIT_FAILURE;

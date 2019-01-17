@@ -3,6 +3,7 @@
 #include "tclap/CmdLine.h"
 
 namespace Nighthawk {
+namespace Client {
 
 OptionsImpl::OptionsImpl(int argc, const char* const* argv) {
   TCLAP::CmdLine cmd("Nighthawk is a web server benchmarking tool.", ' ', "PoC");
@@ -60,12 +61,12 @@ OptionsImpl::OptionsImpl(int argc, const char* const* argv) {
     } catch (const TCLAP::ExitException&) {
       // failure() has already written an informative message to stderr, so all that's left to do
       // is throw our own exception with the original message.
-      throw Nighthawk::MalformedArgvException(e.what());
+      throw MalformedArgvException(e.what());
     }
   } catch (const TCLAP::ExitException& e) {
     // parse() throws an ExitException with status 0 after printing the output for --help and
     // --version.
-    throw Nighthawk::NoServingException();
+    throw NoServingException();
   }
 
   requests_per_second_ = requests_per_second.getValue();
@@ -94,4 +95,5 @@ Client::CommandLineOptionsPtr OptionsImpl::toCommandLineOptions() const {
   return command_line_options;
 }
 
+} // namespace Client
 } // namespace Nighthawk

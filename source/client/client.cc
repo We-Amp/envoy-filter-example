@@ -51,9 +51,10 @@ uint32_t determine_cpu_cores_with_affinity() {
 
 } // namespace
 
-ClientMain::ClientMain(int argc, const char* const* argv) : ClientMain(OptionsImpl(argc, argv)) {}
+ClientMain::ClientMain(int argc, const char* const* argv)
+    : ClientMain(Client::OptionsImpl(argc, argv)) {}
 
-ClientMain::ClientMain(OptionsImpl options)
+ClientMain::ClientMain(Client::OptionsImpl options)
     : options_(options), time_system_(std::make_unique<Envoy::Event::RealTimeSystem>()) {
   ares_library_init(ARES_LIB_INIT_ALL);
   Envoy::Event::Libevent::Global::initialize();

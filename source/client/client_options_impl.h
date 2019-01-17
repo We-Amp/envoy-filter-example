@@ -10,8 +10,7 @@
 #include "source/client/client_options.pb.h"
 
 namespace Nighthawk {
-
-typedef std::unique_ptr<nighthawk::client::CommandLineOptions> NighthawkCommandLineOptionsPtr;
+namespace Client {
 
 class OptionsImpl : public Client::Options {
 public:
@@ -52,4 +51,5 @@ public:
   MalformedArgvException(const std::string& what) : NighthawkException(what) {}
 };
 
+} // namespace Client
 } // namespace Nighthawk
