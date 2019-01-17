@@ -16,7 +16,7 @@ namespace Nighthawk {
 class ClientMain : public Envoy::Logger::Loggable<Envoy::Logger::Id::main> {
 public:
   ClientMain(int argc, const char* const* argv);
-  ClientMain(Client::OptionsPtr options);
+  ClientMain(Client::OptionsPtr&& options);
   ~ClientMain();
 
   bool run();

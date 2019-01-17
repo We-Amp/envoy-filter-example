@@ -55,11 +55,11 @@ uint32_t determine_cpu_cores_with_affinity() {
 ClientMain::ClientMain(int argc, const char* const* argv)
     : ClientMain(std::make_unique<Client::OptionsImpl>(argc, argv)) {}
 
-ClientMain::ClientMain(Client::OptionsPtr options)
+ClientMain::ClientMain(Client::OptionsPtr&& options)
     : options_(std::move(options)), time_system_(std::make_unique<Envoy::Event::RealTimeSystem>()) {
   ares_library_init(ARES_LIB_INIT_ALL);
   Envoy::Event::Libevent::Global::initialize();
-  configureComponentLogLevels(spdlog::level::from_str(options->verbosity()));
+  configureComponentLogLevels(spdlog::level::from_str(options_->verbosity()));
 }
 
 ClientMain::~ClientMain() { ares_library_cleanup(); }
