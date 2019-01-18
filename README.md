@@ -36,9 +36,9 @@ bazel test //test:nighthawk_test
 [14:20:45.726340][011496][I] [source/client/client.cc:207] > worker 1: 499.80/second. Mean: 85.28μs. Stdev: 3.95μs. Connections good/bad/overflow: 1/0/0. Replies: good/fail:2500/0. Stream resets: 0. 
 [14:20:45.726586][011497][I] [source/client/client.cc:207] > worker 2: 499.80/second. Mean: 85.26μs. Stdev: 2.42μs. Connections good/bad/overflow: 1/0/0. Replies: good/fail:2500/0. Stream resets: 0. 
 [14:20:45.726708][011494][I] [source/client/client.cc:227] Global complete:7497. Mean: 85.03μs. Stdev: 3.58μs.
-[14:20:45.727550][011494][I] [source/client/client.cc:242] Done. Run './stats.py res.txt benchmark' for hdrhistogram.
+[14:20:45.727550][011494][I] [source/client/client.cc:242] Done. Run 'tools/stats.py res.txt benchmark' for hdrhistogram.
 
-➜ ./stats.py res.txt benchmark
+➜ tools/stats.py res.txt benchmark
 Uncorrected hdr histogram percentiles (us)
 p50: 84
 p75: 85

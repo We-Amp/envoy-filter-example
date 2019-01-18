@@ -141,7 +141,7 @@
             "label": "simple-valgrind-run-direct",
             "type": "shell",
             "dependsOn": "debug-build",
-            "command": "./valgrind.sh",
+            "command": "./tools/valgrind.sh",
             "problemMatcher": [
                 "$gcc"
             ],
@@ -154,7 +154,7 @@
             "label": "valgrind-run-test-direct",
             "type": "shell",
             "dependsOn": "debug-build-test",
-            "command": "./valgrind-tests.sh",
+            "command": "./tools/valgrind-tests.sh",
             "problemMatcher": [
                 "$gcc"
             ],

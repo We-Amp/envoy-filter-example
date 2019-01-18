@@ -239,7 +239,7 @@ bool Main::run() {
   }
   myfile.close();
 
-  ENVOY_LOG(info, "Done. Run './stats.py res.txt benchmark' for hdrhistogram.");
+  ENVOY_LOG(info, "Done. Run 'tools/stats.py res.txt benchmark' for hdrhistogram.");
 
   return true;
 }
