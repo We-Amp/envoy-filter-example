@@ -9,6 +9,7 @@ import json
 
 histogram = HdrHistogram(1, 60000000, 4)
 
+
 def pp(histogram, p):
     v = histogram.get_value_at_percentile(p)
     print("p{}: {}".format(p, v))
@@ -25,12 +26,13 @@ def print_latencies(histogram, content):
     pp(histogram, 99.999)
     pp(histogram, 100)
 
-    print("min:",min(content))
-    print("max:",max(content))
-    print("mean:",statistics.mean(content))
-    print("median:",statistics.median(content))
-    print("var:",statistics.pvariance(content))
-    print("pstdev:",statistics.pstdev(content))
+    print("min:", min(content))
+    print("max:", max(content))
+    print("mean:", statistics.mean(content))
+    print("median:", statistics.median(content))
+    print("var:", statistics.variance(content))
+    print("stdev:", statistics.stdev(content))
+
 
 def get_latencies(path, type):
     content = []
@@ -43,11 +45,15 @@ def get_latencies(path, type):
 
     return content
 
+
 def main():
     content = get_latencies(sys.argv[1], sys.argv[2])
+    for idx, n in enumerate(content):
+        content[idx] = float(n) / 1000
     for n in content:
-        histogram.record_value(int(n))
+        histogram.record_value(n)
 
     print_latencies(histogram, content)
+
 
 main()

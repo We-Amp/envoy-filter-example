@@ -98,10 +98,13 @@ bool Main::run() {
   // We're going to fire up #concurrency benchmark loops and wait for them to complete.
   std::vector<Envoy::Thread::ThreadPtr> threads;
   std::vector<std::vector<uint64_t>> global_results;
+  std::vector<StreamingStats> global_streaming_stats;
+
   // TODO(oschaaf): rework this. We pre-allocate the global results vector
   // to avoid reallocations which would crash us.
   // Wire up a proper stats sink.
   global_results.reserve(concurrency);
+  global_streaming_stats.resize(concurrency);
 
   if (autoscale) {
     ENVOY_LOG(info, "Detected {} (v)CPUs with affinity..", cpu_cores_with_affinity);
@@ -130,7 +133,7 @@ bool Main::run() {
       auto api =
           std::make_unique<Envoy::Api::Impl>(1000ms /*flush interval*/, thread_factory, *store);
       auto dispatcher = api->allocateDispatcher(*time_system_);
-      StreamingStats streaming_stats;
+      StreamingStats& streaming_stats = global_streaming_stats[i];
 
       // TODO(oschaaf): not here.
       Envoy::ThreadLocal::InstanceImpl tls;
@@ -158,7 +161,7 @@ bool Main::run() {
       // accross a single request. This at least helps a bit for short concurrent high-rps runs.
       double rate = 1 / double(options_->requests_per_second()) / concurrency;
       int64_t spread_us = rate * i * 1000000;
-      ENVOY_LOG(debug, "  t{}: Delay start of worker for {} us.", i, spread_us);
+      ENVOY_LOG(debug, "> worker {}: Delay start of worker for {} us.", i, spread_us);
       if (spread_us) {
         usleep(spread_us);
       }
@@ -186,7 +189,7 @@ bool Main::run() {
       sequencer.waitForCompletion();
 
       ENVOY_LOG(info,
-                "  t{}: {:.{}f}/second. Mean: {:.{}f}μs. Stdev: "
+                "> worker {}: {:.{}f}/second. Mean: {:.{}f}μs. Stdev: "
                 "{:.{}f}μs. "
                 "Connections good/bad/overflow: {}/{}/{}. Replies: good/fail:{}/{}. Stream "
                 "resets: {}. ",
@@ -214,6 +217,16 @@ bool Main::run() {
     t->join();
   }
 
+  if (concurrency > 1) {
+    StreamingStats merged_global_stats = global_streaming_stats[0];
+    for (uint32_t i = 1; i < concurrency; i++) {
+      merged_global_stats = merged_global_stats.combine(global_streaming_stats[i]);
+    }
+    ENVOY_LOG(info, "Global #complete:{}. Mean: {:.{}f}μs. Stdev: {:.{}f}μs.",
+              merged_global_stats.count(), merged_global_stats.mean() / 1000, 2,
+              merged_global_stats.stdev() / 1000, 2);
+  }
+
   // TODO(oschaaf): proper stats tracking/configuration
   std::ofstream myfile;
   myfile.open("res.txt");
@@ -221,10 +234,11 @@ bool Main::run() {
   for (uint32_t i = 0; i < concurrency; i++) {
     std::vector<uint64_t>& results = global_results.at(i);
     for (int r : results) {
-      myfile << (r / 1000) << "\n";
+      myfile << r << "\n";
     }
   }
   myfile.close();
+
   ENVOY_LOG(info, "Done. Run './stats.py res.txt benchmark' for hdrhistogram.");
 
   return true;

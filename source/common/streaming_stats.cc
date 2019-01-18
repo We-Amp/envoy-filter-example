@@ -21,4 +21,15 @@ double StreamingStats::variance() const { return sum_of_squares_ / (count_ - 1.0
 
 double StreamingStats::stdev() const { return sqrt(variance()); }
 
+StreamingStats StreamingStats::combine(const StreamingStats& b) {
+  const StreamingStats& a = *this;
+  StreamingStats combined;
+
+  combined.count_ = a.count() + b.count();
+  combined.mean_ = ((a.count() * a.mean()) + (b.count() * b.mean())) / combined.count_;
+  combined.sum_of_squares_ = a.sum_of_squares_ + b.sum_of_squares_ +
+                             pow(a.mean() - b.mean(), 2) * a.count() * b.count() / combined.count();
+  return combined;
 }
+
+} // namespace Nighthawk

@@ -15,6 +15,8 @@ public:
   double variance() const;
   double stdev() const;
 
+  StreamingStats combine(const StreamingStats& a);
+
 private:
   int64_t count_;
   double mean_;

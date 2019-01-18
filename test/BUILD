@@ -14,6 +14,7 @@ envoy_cc_test(
         "benchmark_http_client_test.cc",
         "rate_limiter_test.cc",
         "sequencer_test.cc",
+        "streaming_stats_test.cc",
     ],
     repository = "@envoy",
     data = [
