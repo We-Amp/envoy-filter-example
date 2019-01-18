@@ -9,10 +9,8 @@ load(
     "@envoy//bazel:envoy_build_system.bzl",
     "envoy_cc_binary",
     "envoy_cc_library",
-    "envoy_cc_platform_dep",
     "envoy_cc_posix_library",
     "envoy_cc_win32_library",
-    "envoy_package",
 )
 
 load("@envoy//api/bazel:api_build_system.bzl", "api_proto_library_internal")
@@ -45,8 +43,6 @@ envoy_cc_library(
         "//source/common:nighthawk_common_lib",
         "@envoy//source/exe:envoy_common_lib",
         "@envoy//source/common/common:compiler_requirements_lib",
-        "@envoy//source/common/stats:stats_lib",
-        "@envoy//source/server/config_validation:server_lib",
         "@envoy//source/common/common:thread_impl_lib_posix",
     ]
 )

@@ -1,4 +1,4 @@
-workspace(name = "envoy_filter_example")
+workspace(name = "nighthawk")
 
 local_repository(
     name = "envoy",

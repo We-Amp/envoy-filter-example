@@ -1,11 +1,6 @@
 licenses(["notice"])  # Apache 2
 
 load(
-    "//bazel:nighthawk.bzl",
-    "nighthawk_cc_platform_dep"
-)
-
-load(
     "@envoy//bazel:envoy_build_system.bzl",
     "envoy_cc_binary",
     "envoy_cc_library",
@@ -14,9 +9,6 @@ load(
     "envoy_cc_win32_library",
     "envoy_package",
 )
-
-load("@envoy//api/bazel:api_build_system.bzl", "api_proto_library_internal")
-load("@envoy//bazel:repositories.bzl", "PPC_SKIP_TARGETS")
 
 envoy_cc_library(
     name = "nighthawk_common_lib",
