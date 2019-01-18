@@ -12,9 +12,9 @@ NOTE: https certificates are not validated.
 
 ## Building and running the benchmark
 
-TODO(oschaaf): Collect and list prerequisites. Currently mostly the same as envoy.
 
 ```bash
+# TODO(oschaaf): Collect and list prerequisites. Currently mostly the same as envoy.
 # build it
 bazel build //:nighthawk_client
 
@@ -22,11 +22,9 @@ bazel build //:nighthawk_client
 bazel test //test:nighthawk_test
 
 # start envoy
-
-➜ taskset -c 0-1 /path/to/envoy --config-path envoy.yaml
+➜ taskset -c 0-1 /path/to/envoy --config-path tools/envoy.yaml
 
 # run a benchmark
-
 ➜ taskset -c 2-4 bazel-bin/nighthawk_client --concurrency auto --rps 500 --connections 1 --duration 5 http://127.0.0.1:10000/ 
 [14:20:40.724350][011494][I] [source/client/client.cc:110] Detected 3 (v)CPUs with affinity..
 [14:20:40.724394][011494][I] [source/client/client.cc:114] Starting 3 threads / event loops. Test duration: 5 seconds.
