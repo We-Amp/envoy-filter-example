@@ -5,9 +5,9 @@
             "includePath": [
                 "/usr/include",
                 "/usr/local/include",
-                "${workspaceFolder}/bazel_output_base/external/**",
+                "${workspaceFolder}/**",
                 "${workspaceFolder}/envoy/**",
-                "${workspaceFolder}/**"
+                "/tmp/nighthawk_bazel_output_base/external/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
@@ -18,9 +18,9 @@
                 "path": [
                     "/usr/include",
                     "/usr/local/include",
-                    "${workspaceFolder}/bazel_output_base/external/**",
+                    "${workspaceFolder}/**",
                     "${workspaceFolder}/envoy/**",
-                    "${workspaceFolder}/**"
+                    "/tmp/nighthawk_bazel_output_base/external/**"
                 ],
                 "limitSymbolsToIncludedHeaders": true,
                 "databaseFilename": ""

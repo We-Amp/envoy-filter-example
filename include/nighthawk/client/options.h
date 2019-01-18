@@ -1,7 +1,7 @@
 #pragma once
 
 #include <chrono>
-#include <cstdint>
+#include <memory>
 #include <string>
 
 #include "envoy/common/pure.h"

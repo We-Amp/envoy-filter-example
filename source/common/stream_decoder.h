@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 #include "common/http/codec_wrappers.h"
 
 namespace Nighthawk {
